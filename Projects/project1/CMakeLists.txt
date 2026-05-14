@@ -12,3 +12,6 @@ target_link_libraries(project1 ${OpenCV_LIBS})
 
 add_executable(imgDisplay imgDisplay.cpp)
 target_link_libraries(imgDisplay ${OpenCV_LIBS})
+
+add_executable(vidDisplay vidDisplay.cpp)
+target_link_libraries(vidDisplay ${OpenCV_LIBS})
