@@ -1,0 +1,42 @@
+Setup
+------
+- C++
+- OpenCV4
+- understanding makefile
+- onnxruntime package (for depth anything v2)
+
+
+Tasks
+-----
+1. Read an image from a file and display it.
+filename - imgDisplay.cpp
+
+2. Display live video
+filename - vidDisplay.cpp
+needs webcam for live video capture
+save image to s file if user presses 's'
+
+3. Display grey  scale live video
+update vidDisplay.cpp
+use 'g' key to turn on and off the grey scale filter
+
+
+4. Display alternative greyscale live video. 
+
+5. Sepia tone filter
+
+6. 5x5 blur filter
+
+7. Sobel filter as separable filters
+
+8. Gradient magnitude image from sobel filter. 
+
+9. Filter that Blurs and quanitzes a color image.
+
+10. Detect faces in an image
+
+11. Use depth anything v2 to get depth estimates
+
+12. Custom effects
+
+
