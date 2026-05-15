@@ -7,14 +7,15 @@ find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(project1 main.cpp)
-target_link_libraries(project1 ${OpenCV_LIBS})
-
+# Task 1: image display
 add_executable(imgDisplay imgDisplay.cpp)
 target_link_libraries(imgDisplay ${OpenCV_LIBS})
 
-add_executable(vidDisplay vidDisplay.cpp)
+# Tasks 2-9: unified video display + all filters
+add_executable(vidDisplay vidDisplay.cpp filter.cpp)
 target_link_libraries(vidDisplay ${OpenCV_LIBS})
 
-add_executable(vidDisplayGray vidDisplayGray.cpp)
-target_link_libraries(vidDisplayGray ${OpenCV_LIBS})
+# OpenCV version sanity check
+add_executable(project1 main.cpp)
+target_link_libraries(project1 ${OpenCV_LIBS})
+
