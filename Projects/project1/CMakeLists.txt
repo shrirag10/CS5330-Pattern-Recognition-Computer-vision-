@@ -15,3 +15,6 @@ target_link_libraries(imgDisplay ${OpenCV_LIBS})
 
 add_executable(vidDisplay vidDisplay.cpp)
 target_link_libraries(vidDisplay ${OpenCV_LIBS})
+
+add_executable(vidDisplayGray vidDisplayGray.cpp)
+target_link_libraries(vidDisplayGray ${OpenCV_LIBS})
