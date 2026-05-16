@@ -12,8 +12,14 @@ add_executable(imgDisplay imgDisplay.cpp)
 target_link_libraries(imgDisplay ${OpenCV_LIBS})
 
 # Tasks 2-9: unified video display + all filters
-add_executable(vidDisplay vidDisplay.cpp filter.cpp)
+add_executable(vidDisplay vidDisplay.cpp filter.cpp faceDetect/faceDetect.cpp)
+target_include_directories(vidDisplay PRIVATE faceDetect)
 target_link_libraries(vidDisplay ${OpenCV_LIBS})
+
+# Copy Haar cascade XML to build directory so the runtime path resolves
+configure_file(faceDetect/haarcascade_frontalface_alt2.xml
+               ${CMAKE_CURRENT_BINARY_DIR}/haarcascade_frontalface_alt2.xml
+               COPYONLY)
 
 # OpenCV version sanity check
 add_executable(project1 main.cpp)

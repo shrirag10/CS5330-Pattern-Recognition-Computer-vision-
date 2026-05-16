@@ -20,6 +20,7 @@
  *   y - Task 7: toggle Sobel Y (absolute value displayed)
  *   m - Task 8: toggle gradient magnitude
  *   l - Task 9: toggle blur+quantize (10 levels)
+ *   f - Task 10: toggle Haar cascade face detection with bounding boxes
  */
 
 #include <iostream>
@@ -28,6 +29,8 @@
 #include <filesystem>
 #include <opencv2/opencv.hpp>
 #include "filter.h"
+#include <vector>
+#include "faceDetect.h"
 
 int main(int argc, char *argv[]) {
 
@@ -44,14 +47,16 @@ int main(int argc, char *argv[]) {
     printf("Expected size: %d %d\n", refS.width, refS.height);
     printf("Press 'q' to quit, 's' to save frame.\n");
     printf("Keys: g=opencv-grey, h=custom-grey, p=sepia, b=blur,\n");
-    printf("      1=timed-blur1, x=sobelX, y=sobelY, m=magnitude, l=blur+quantize\n");
+    printf("      1=timed-blur1, x=sobelX, y=sobelY, m=magnitude, l=blur+quantize,\n");
+    printf("      f=face-detect\n");
 
     cv::namedWindow("Video", 1);
     std::filesystem::create_directories("saved");
 
     cv::Mat frame;
     char mode = ' ';  // currently active filter; ' ' = no filter
-
+    cv::Mat grey;
+    std::vector<cv::Rect> faces;
     for (;;) {
         *capdev >> frame;
         if (frame.empty()) {
@@ -116,7 +121,14 @@ int main(int argc, char *argv[]) {
             // Task 9: Blur + quantize (10 levels for a cartoon/poster effect)
             blurQuantize(frame, display, 10);
 
-        } else {
+        } 
+        else if(mode == 'f') {
+            display = frame.clone();
+            cv::cvtColor(frame, grey, cv::COLOR_BGR2GRAY);
+            detectFaces(grey, faces);
+            drawBoxes(display, faces);
+        }
+        else {
             // Default: show original color frame
             display = frame;
         }
