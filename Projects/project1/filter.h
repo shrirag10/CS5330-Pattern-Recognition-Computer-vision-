@@ -108,4 +108,39 @@ int magnitude(cv::Mat &sx, cv::Mat &sy, cv::Mat &dst);
  */
 int blurQuantize(cv::Mat &src, cv::Mat &dst, int levels);
 
+/**
+ * Pixel-wise color negative: each channel value becomes 255 - value.
+ *
+ * @param src  Input color image (CV_8UC3, BGR)
+ * @param dst  Output negative image (CV_8UC3, BGR)
+ * @return 0 on success, -1 on error
+ */
+int negative(cv::Mat &src, cv::Mat &dst);
+
+/**
+ * Depth-based fog: blends each pixel toward a fog color using exponential
+ * falloff based on distance. Close pixels (high depth value in DA2) stay
+ * clear; far pixels fade into fog. fog_amount = 1 - exp(-k * distance)
+ * where distance = 1 - (depth / 255).
+ *
+ * @param src    Input color image (CV_8UC3, BGR)
+ * @param depth  Greyscale depth map (CV_8UC1), same size as src
+ * @param dst    Output fogged image (CV_8UC3, BGR)
+ * @param k      Fog density coefficient (higher = thicker fog, default 3.0)
+ * @return 0 on success, -1 on error
+ */
+int depthFog(cv::Mat &src, cv::Mat &depth, cv::Mat &dst, float k = 3.0f);
+
+/**
+ * Emboss effect using Sobel X and Y dot-producted with a light direction.
+ * Light direction (0.7071, 0.7071) simulates light from the upper-left.
+ * Output is a greyscale image with mid-grey (128) as the neutral baseline.
+ * Raised edges facing the light appear bright; away from light appear dark.
+ *
+ * @param src  Input color image (CV_8UC3, BGR)
+ * @param dst  Output embossed image (CV_8UC3)
+ * @return 0 on success, -1 on error
+ */
+int emboss(cv::Mat &src, cv::Mat &dst);
+
 #endif // FILTER_H
