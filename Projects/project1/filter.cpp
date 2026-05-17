@@ -310,6 +310,105 @@ int magnitude(cv::Mat &sx, cv::Mat &sy, cv::Mat &dst) {
 }
 
 /*
+ * depthFog: Exponential depth-based fog.
+ *
+ * DA2 outputs higher values for closer objects, so distance = 1 - depth/255.
+ * Fog amount per pixel: f = 1 - exp(-k * distance)
+ * Final color: dst = (1-f)*src + f*fog_color
+ * Fog color is a light grey (200, 200, 200).
+ */
+int depthFog(cv::Mat &src, cv::Mat &depth, cv::Mat &dst, float k) {
+    if (src.empty() || depth.empty()) return -1;
+    if (src.size() != depth.size())   return -1;
+
+    dst.create(src.rows, src.cols, CV_8UC3);
+
+    const cv::Vec3b fogColor(200, 200, 200);
+
+    for (int r = 0; r < src.rows; r++) {
+        const cv::Vec3b    *srcRow = src.ptr<cv::Vec3b>(r);
+        const unsigned char *depRow = depth.ptr<unsigned char>(r);
+        cv::Vec3b           *dstRow = dst.ptr<cv::Vec3b>(r);
+
+        for (int c = 0; c < src.cols; c++) {
+            float distance = 1.0f - depRow[c] / 255.0f;  // 0=close, 1=far
+            float fog = 1.0f - std::exp(-k * distance);
+
+            for (int ch = 0; ch < 3; ch++) {
+                float blended = (1.0f - fog) * srcRow[c][ch] + fog * fogColor[ch];
+                dstRow[c][ch] = (uchar)std::min(255.0f, std::max(0.0f, blended));
+            }
+        }
+    }
+    return 0;
+}
+
+/*
+ * emboss: Emboss effect via Sobel dot product with a light direction.
+ *
+ * For each pixel, compute the dot product of the (sx, sy) gradient vector
+ * with a fixed light direction (lx, ly) = (0.7071, 0.7071) — upper-left light.
+ * The result is averaged across the three channels then shifted by +128 so
+ * that flat regions map to mid-grey, raised edges facing the light are bright,
+ * and edges facing away are dark. Output is clamped to [0, 255].
+ */
+int emboss(cv::Mat &src, cv::Mat &dst) {
+    if (src.empty()) return -1;
+
+    cv::Mat sx, sy;
+    sobelX3x3(src, sx);
+    sobelY3x3(src, sy);
+
+    dst.create(src.rows, src.cols, CV_8UC3);
+
+    const float lx = 0.7071f;
+    const float ly = 0.7071f;
+
+    for (int r = 0; r < src.rows; r++) {
+        const cv::Vec3s *sxRow = sx.ptr<cv::Vec3s>(r);
+        const cv::Vec3s *syRow = sy.ptr<cv::Vec3s>(r);
+        cv::Vec3b       *dstRow = dst.ptr<cv::Vec3b>(r);
+
+        for (int c = 0; c < src.cols; c++) {
+            float dot = 0.0f;
+            for (int ch = 0; ch < 3; ch++) {
+                dot += sxRow[c][ch] * lx + syRow[c][ch] * ly;
+            }
+            dot /= 3.0f;  // average across channels
+
+            int val = (int)(dot + 128.0f);
+            uchar out = (uchar)std::min(255, std::max(0, val));
+            dstRow[c] = cv::Vec3b(out, out, out);
+        }
+    }
+    return 0;
+}
+
+/*
+ * negative: Pixel-wise color negative.
+ *
+ * Each channel value is inverted: dst[c] = 255 - src[c].
+ * No neighborhood access needed — purely per-pixel.
+ */
+int negative(cv::Mat &src, cv::Mat &dst) {
+    if (src.empty()) return -1;
+
+    dst.create(src.rows, src.cols, CV_8UC3);
+
+    for (int r = 0; r < src.rows; r++) {
+        const cv::Vec3b *srcRow = src.ptr<cv::Vec3b>(r);
+        cv::Vec3b       *dstRow = dst.ptr<cv::Vec3b>(r);
+
+        for (int c = 0; c < src.cols; c++) {
+            dstRow[c] = cv::Vec3b(255 - srcRow[c][0],
+                                  255 - srcRow[c][1],
+                                  255 - srcRow[c][2]);
+        }
+    }
+    return 0;
+}
+
+/*
  * blurQuantize: Blurs a color image then quantizes each channel.
  *
  * Step 1: Apply blur5x5_2 to smooth the image.

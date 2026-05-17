@@ -23,6 +23,9 @@
  *   f - Task 10: toggle Haar cascade face detection with bounding boxes
  *   d - Task 11: toggle depth map visualization (INFERNO colormap)
  *   c - Task 11: toggle depth-based background greyscale (creative filter)
+ *   n - Task 12: toggle color negative
+ *   e - Task 13: toggle emboss effect
+ *   o - Task 14: toggle depth-based fog
  */
 
 #include <iostream>
@@ -54,7 +57,7 @@ int main(int argc, char *argv[]) {
     printf("Press 'q' to quit, 's' to save frame.\n");
     printf("Keys: g=opencv-grey, h=custom-grey, p=sepia, b=blur,\n");
     printf("      1=timed-blur1, x=sobelX, y=sobelY, m=magnitude, l=blur+quantize,\n");
-    printf("      f=face-detect, d=depth-map, c=depth-defocus\n");
+    printf("      f=face-detect, d=depth-map, c=depth-defocus, n=negative, e=emboss, o=fog\n");
 
     // scale factor: normalize shorter side to 256px for the depth network
     float da2_scale = 256.0f / std::min(refS.width, refS.height);
@@ -150,6 +153,20 @@ int main(int argc, char *argv[]) {
             cv::cvtColor(frame, grey, cv::COLOR_BGR2GRAY);
             detectFaces(grey, faces);
             drawBoxes(display, faces);
+
+        } else if (mode == 'n') {
+            // Task 12: color negative
+            negative(frame, display);
+
+        } else if (mode == 'e') {
+            // Task 13: emboss effect
+            emboss(frame, display);
+
+        } else if (mode == 'o') {
+            // Task 14: depth-based exponential fog
+            da_net.set_input(frame, da2_scale);
+            da_net.run_network(depth, frame.size());
+            depthFog(frame, depth, display);
 
         } else if (mode == 'd') {
             // Task 11: depth map visualization
