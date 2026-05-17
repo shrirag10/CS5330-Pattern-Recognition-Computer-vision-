@@ -3,3 +3,18 @@ build/
 *.out
 imgDisplay
 project1
+
+# ONNX Runtime prebuilt package (large binaries)
+onnxruntime-linux-x64-1.26.0/include/
+onnxruntime-linux-x64-1.26.0/lib/
+onnxruntime-linux-x64-1.26.0/cmake/
+onnxruntime-linux-x64-1.26.0/pkgconfig/
+
+# DA2 model and example binaries (large files / prof-provided source)
+da2-code/model_fp16.onnx
+da2-code/__MACOSX/
+da2-code/*.jpeg
+da2-code/da2-example.cpp
+da2-code/da2-video.cpp
+da2-code/makefile
+da2-code/build/

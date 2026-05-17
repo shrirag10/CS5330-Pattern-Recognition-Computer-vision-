@@ -21,6 +21,8 @@
  *   m - Task 8: toggle gradient magnitude
  *   l - Task 9: toggle blur+quantize (10 levels)
  *   f - Task 10: toggle Haar cascade face detection with bounding boxes
+ *   d - Task 11: toggle depth map visualization (INFERNO colormap)
+ *   c - Task 11: toggle depth-based background greyscale (creative filter)
  */
 
 #include <iostream>
@@ -31,8 +33,12 @@
 #include "filter.h"
 #include <vector>
 #include "faceDetect.h"
+#include "da2-code/DA2Network.hpp"
 
 int main(int argc, char *argv[]) {
+
+    // Load DA2 depth network once before the main loop
+    DA2Network da_net("model_fp16.onnx");
 
     // Open the default video capture device
     cv::VideoCapture *capdev = new cv::VideoCapture(0);
@@ -48,7 +54,10 @@ int main(int argc, char *argv[]) {
     printf("Press 'q' to quit, 's' to save frame.\n");
     printf("Keys: g=opencv-grey, h=custom-grey, p=sepia, b=blur,\n");
     printf("      1=timed-blur1, x=sobelX, y=sobelY, m=magnitude, l=blur+quantize,\n");
-    printf("      f=face-detect\n");
+    printf("      f=face-detect, d=depth-map, c=depth-defocus\n");
+
+    // scale factor: normalize shorter side to 256px for the depth network
+    float da2_scale = 256.0f / std::min(refS.width, refS.height);
 
     cv::namedWindow("Video", 1);
     std::filesystem::create_directories("saved");
@@ -56,7 +65,21 @@ int main(int argc, char *argv[]) {
     cv::Mat frame;
     char mode = ' ';  // currently active filter; ' ' = no filter
     cv::Mat grey;
+    cv::Mat depth;    // grayscale depth output from DA2
     std::vector<cv::Rect> faces;
+
+    // mouse callback: click anywhere on the video window to print depth value at that pixel
+    cv::setMouseCallback("Video", [](int event, int x, int y, int, void *userdata) {
+        if (event != cv::EVENT_LBUTTONDOWN) return;
+        cv::Mat *dep = static_cast<cv::Mat *>(userdata);
+        if (dep->empty()) {
+            printf("Depth map not available (press 'd' or 'c' first)\n");
+            return;
+        }
+        if (x < 0 || x >= dep->cols || y < 0 || y >= dep->rows) return;
+        int val = dep->at<unsigned char>(y, x);
+        printf("Depth at (%d, %d): %d  [0=closest, 255=farthest]\n", x, y, val);
+    }, &depth);
     for (;;) {
         *capdev >> frame;
         if (frame.empty()) {
@@ -127,6 +150,35 @@ int main(int argc, char *argv[]) {
             cv::cvtColor(frame, grey, cv::COLOR_BGR2GRAY);
             detectFaces(grey, faces);
             drawBoxes(display, faces);
+
+        } else if (mode == 'd') {
+            // Task 11: depth map visualization
+            da_net.set_input(frame, da2_scale);
+            da_net.run_network(depth, frame.size());
+            cv::applyColorMap(depth, display, cv::COLORMAP_INFERNO);
+
+        } else if (mode == 'c') {
+            // Task 11: depth-based background greyscale
+            // foreground (depth <= threshold) stays in color; background goes greyscale
+            da_net.set_input(frame, da2_scale);
+            da_net.run_network(depth, frame.size());
+
+            cv::Mat grey_bgr;
+            cv::Mat grey_single;
+            cv::cvtColor(frame, grey_single, cv::COLOR_BGR2GRAY);
+            cv::cvtColor(grey_single, grey_bgr, cv::COLOR_GRAY2BGR);
+
+            display = frame.clone();
+            const unsigned char threshold = 150; // higher = closer in DA2 output
+            for (int i = 0; i < frame.rows; i++) {
+                const cv::Vec3b *src_row    = frame.ptr<cv::Vec3b>(i);
+                const cv::Vec3b *grey_row   = grey_bgr.ptr<cv::Vec3b>(i);
+                const unsigned char *dep_row = depth.ptr<unsigned char>(i);
+                cv::Vec3b *dst_row          = display.ptr<cv::Vec3b>(i);
+                for (int j = 0; j < frame.cols; j++) {
+                    dst_row[j] = (dep_row[j] >= threshold) ? src_row[j] : grey_row[j];
+                }
+            }
         }
         else {
             // Default: show original color frame
