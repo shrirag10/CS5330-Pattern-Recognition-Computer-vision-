@@ -9,13 +9,9 @@
 \usepackage{float}
 \usepackage{microtype}
 
-\hypersetup{
-    colorlinks=true,
-    linkcolor=blue,
-    urlcolor=blue
-}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
 
-\title{\textbf{CS5330 Computer Vision --- Project 1}\\
+\title{\textbf{CS5330 Computer Vision -- Project 1}\\
        \large Image Manipulation and Video Filtering}
 \author{Shriman Raghav Srinivasan \and Shyam Srinivasan}
 \date{May 2026}
@@ -28,27 +24,28 @@
 \section*{Project Overview}
 % ============================================================
 
-This project explores fundamental image processing techniques using C++ and
-OpenCV. We built an interactive program that captures live video from a
-webcam and applies a suite of real-time filters activated by keypresses.
-Filters include greyscale conversion (standard and custom-weighted), sepia
-tone, Gaussian blur (two implementations with a speed comparison), Sobel
-edge detection in both the X and Y directions, gradient magnitude
-visualization, blur-and-quantize posterization, Haar-cascade face detection,
-monocular depth estimation using the Depth Anything V2 neural network, and
-three custom effects (color negative, emboss, and depth-based exponential
-fog). All pixel-level manipulation functions are implemented from scratch in
-\texttt{filter.cpp} without using OpenCV filter functions where prohibited.
-The project deepened our understanding of the spatial structure of images,
-the efficiency trade-offs of different implementation strategies, and the
-power of combining classical CV techniques with modern deep networks.
+For this project we built a live video filtering program in C++ using OpenCV.
+The idea is that you run the program, point your webcam at something, and then
+use different keys to switch between filters in real time. We implemented
+filters for greyscale (two versions), sepia tone, Gaussian blur (two
+implementations at different speeds), Sobel edge detection, gradient magnitude,
+and a blur-and-quantize effect. We also integrated a face detector using a Haar
+cascade and a depth estimation model called Depth Anything V2, which runs
+through the ONNX runtime. On top of those, we added three custom effects:
+color negative, emboss, and depth-based fog.
+
+All the pixel manipulation functions are written from scratch in
+\texttt{filter.cpp}. The main loop lives in \texttt{vidDisplay.cpp} and just
+reads a frame, applies whatever filter is currently selected, and shows it. We
+split the work: Shriman handled Tasks 4 through 9 (filters.cpp) and Shyam
+handled the rest.
 
 % ============================================================
 \section*{Required Images and Results}
 % ============================================================
 
 %------------------------------------------------------------
-\subsection*{Required Image 1 --- OpenCV Greyscale (Task 3)}
+\subsection*{Required Image 1 -- OpenCV Greyscale (Task 3)}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -60,17 +57,17 @@ power of combining classical CV techniques with modern deep networks.
     \hfill
     \begin{subfigure}[b]{0.48\textwidth}
         \includegraphics[width=\textwidth]{report_imgs/img1a_opencv_grey.png}
-        \caption{OpenCV \texttt{cvtColor} greyscale}
+        \caption{\texttt{cvtColor} greyscale output}
     \end{subfigure}
-    \caption{Task 3 --- Standard greyscale conversion using \texttt{cv::COLOR\_BGR2GRAY}.
-    OpenCV's conversion follows the ITU-R BT.601 luminance standard:
-    $Y = 0.299R + 0.587G + 0.114B$. Green is weighted most heavily
-    because the human eye is most sensitive to green wavelengths, followed
-    by red and then blue.}
+    \caption{Task 3: Standard greyscale using \texttt{cv::COLOR\_BGR2GRAY}.
+    According to the OpenCV docs, it uses the formula
+    $Y = 0.299R + 0.587G + 0.114B$, which comes from the ITU-R BT.601
+    standard. Green gets the most weight because the human eye is most
+    sensitive to green light.}
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 2 --- Custom Greyscale (Task 4)}
+\subsection*{Required Image 2 -- Custom Greyscale (Task 4)}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -84,19 +81,17 @@ power of combining classical CV techniques with modern deep networks.
         \includegraphics[width=\textwidth]{report_imgs/img2_custom_grey.png}
         \caption{Custom greyscale ($0.15R + 0.35G + 0.50B$)}
     \end{subfigure}
-    \caption{Task 4 --- Custom greyscale with blue-channel emphasis.
-    The custom function \texttt{greyscale()} uses weights
-    $0.15R + 0.35G + 0.50B$, weighting blue $4.4\times$ more than the
-    ITU standard. This inverts the tonal hierarchy: warm (red/orange)
-    regions appear darker and cool (blue/sky) regions appear brighter
-    compared to the standard output. All three output channels are set
-    to the same computed value so the image is truly greyscale.
-    Pixels are accessed directly via row pointers (\texttt{ptr<Vec3b>})
-    for efficiency.}
+    \caption{Task 4: Custom greyscale with a blue-channel emphasis.
+    We used weights $0.15R + 0.35G + 0.50B$ so blue is weighted about
+    4 times more than in the standard formula. This makes warm-colored
+    (red/orange) regions look darker and cool-colored (blue) regions look
+    brighter compared to the OpenCV version. All three output channels
+    are set to the same value so it is actually greyscale. Pixels are
+    accessed using row pointers (\texttt{ptr<Vec3b>}).}
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 3 --- Sepia Tone Filter (Task 5)}
+\subsection*{Required Image 3 -- Sepia Tone (Task 5)}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -108,23 +103,22 @@ power of combining classical CV techniques with modern deep networks.
     \hfill
     \begin{subfigure}[b]{0.48\textwidth}
         \includegraphics[width=\textwidth]{report_imgs/img3_sepia.png}
-        \caption{Sepia tone output}
+        \caption{Sepia filter output}
     \end{subfigure}
-    \caption{Task 5 --- Sepia tone filter using the standard antique-camera
-    matrix. Each new channel is computed as a weighted sum of all three
-    \emph{original} BGR values:
+    \caption{Task 5: Sepia tone filter. Each output channel is a weighted
+    combination of all three input channels:
     $B' = 0.272R + 0.534G + 0.131B$,
     $G' = 0.349R + 0.686G + 0.168B$,
     $R' = 0.393R + 0.769G + 0.189B$.
-    To ensure original values are used throughout, all three channels are
-    read into separate \texttt{float} variables \emph{before} any output
-    is written. This prevents a modified channel from contaminating
-    subsequent calculations. Output values are clamped to $[0, 255]$
-    because the red and green coefficient rows sum to more than 1.}
+    To make sure we always use the original values, we read all three
+    channels into float variables before writing anything. That way no
+    output channel can accidentally influence another. We also clamp
+    values to 255 since the red and green rows of coefficients sum
+    to more than 1.}
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 4 --- 5x5 Gaussian Blur (Task 6)}
+\subsection*{Required Image 4 -- 5x5 Gaussian Blur (Task 6)}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -138,34 +132,33 @@ power of combining classical CV techniques with modern deep networks.
         \includegraphics[width=\textwidth]{report_imgs/img4b_blur.png}
         \caption{After \texttt{blur5x5\_2}}
     \end{subfigure}
-    \caption{Task 6 --- 5$\times$5 Gaussian blur.
-    The integer kernel $[1\;2\;4\;2\;1;\;2\;4\;8\;4\;2;\;4\;8\;16\;8\;4;\;
-    2\;4\;8\;4\;2;\;1\;2\;4\;2\;1]$ (sum~$= 100$) approximates a Gaussian.
-    Each color channel is blurred independently.}
+    \caption{Task 6: 5x5 Gaussian blur applied to each color channel separately.
+    The kernel used is $[1\;2\;4\;2\;1;\;2\;4\;8\;4\;2;\;4\;8\;16\;8\;4;\;
+    2\;4\;8\;4\;2;\;1\;2\;4\;2\;1]$ with a sum of 100.}
 \end{figure}
 
-\subsubsection*{Timing Comparison (960$\times$720 image, avg.\ 5 runs)}
+\subsubsection*{Timing Comparison (960x720 image, average of 5 runs)}
 
 \begin{table}[H]
 \centering
 \begin{tabular}{lll}
 \toprule
-\textbf{Function} & \textbf{Avg.\ time} & \textbf{Approach} \\
+\textbf{Function} & \textbf{Avg. time} & \textbf{Method} \\
 \midrule
-\texttt{blur5x5\_1} & 16.01\,ms & Naive nested loop with \texttt{.at<>} \\
-\texttt{blur5x5\_2} & 3.81\,ms  & Separable passes + row pointers \\
+\texttt{blur5x5\_1} & 16.01 ms & Nested loop with \texttt{.at<>} \\
+\texttt{blur5x5\_2} & 3.81 ms  & Separable passes and row pointers \\
 \bottomrule
 \end{tabular}
-\caption{$\approx 4.2\times$ speedup from two changes:
-(1)~\textbf{Separable filtering} --- the 2D kernel is split into a
-horizontal $[1\;2\;4\;2\;1]$ pass then a vertical $[1\;2\;4\;2\;1]$ pass,
-reducing operations per pixel from 25 to 10.
-(2)~\textbf{Row pointer access} --- \texttt{ptr<Vec3b>()} avoids the
-bounds-checking overhead of \texttt{.at<>()}.}
+\caption{\texttt{blur5x5\_2} is about 4x faster for two reasons.
+First, we split the 2D filter into a horizontal pass followed by a vertical
+pass using the 1D kernel $[1\;2\;4\;2\;1]$. This cuts operations per pixel
+from 25 down to 10. Second, we access pixels through row pointers
+(\texttt{ptr<Vec3b>}) instead of \texttt{.at<>}, which avoids
+bounds-checking on every access.}
 \end{table}
 
 %------------------------------------------------------------
-\subsection*{Required Images 5 --- Sobel Filters and Gradient Magnitude (Tasks 7--8)}
+\subsection*{Required Images 5 -- Sobel Filters and Gradient Magnitude (Tasks 7 and 8)}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -177,35 +170,36 @@ bounds-checking overhead of \texttt{.at<>()}.}
     \hfill
     \begin{subfigure}[b]{0.48\textwidth}
         \includegraphics[width=\textwidth]{report_imgs/img5a_sobelX.png}
-        \caption{Sobel X (absolute value)}
+        \caption{Sobel X (absolute value shown)}
     \end{subfigure}
 
     \vspace{0.5em}
 
     \begin{subfigure}[b]{0.48\textwidth}
         \includegraphics[width=\textwidth]{report_imgs/img5b_sobelY.png}
-        \caption{Sobel Y (absolute value)}
+        \caption{Sobel Y (absolute value shown)}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.48\textwidth}
         \includegraphics[width=\textwidth]{report_imgs/img5c_magnitude.png}
         \caption{Gradient magnitude}
     \end{subfigure}
-    \caption{Tasks 7--8 --- Sobel edge detection and gradient magnitude.
-    \texttt{sobelX3x3()} detects \emph{vertical} edges (bright where intensity
-    changes left-to-right); positive values indicate a right-going gradient.
-    It decomposes as horizontal $[-1\;0\;1]$ then vertical $[1\;2\;1]$.
-    \texttt{sobelY3x3()} detects \emph{horizontal} edges (positive = upward
-    gradient), decomposed as horizontal $[1\;2\;1]$ then vertical $[1\;0\;-1]$.
-    Both output \texttt{CV\_16SC3} (signed short) since values span
-    $[-1020, 1020]$. \texttt{cv::convertScaleAbs} is used only for
-    visualization; the raw signed output is kept as a separate variable.
-    The magnitude image combines both: $M = \sqrt{s_x^2 + s_y^2}$
-    per channel, clamped to $[0,255]$.}
+    \caption{Tasks 7 and 8: Sobel edge detection and gradient magnitude.
+    Sobel X picks up vertical edges (left-to-right intensity changes) using
+    the separable filters $[-1\;0\;1]$ horizontal then $[1\;2\;1]$ vertical,
+    with positive values meaning a right-going gradient.
+    Sobel Y picks up horizontal edges using $[1\;2\;1]$ horizontal then
+    $[1\;0\;-1]$ vertical, with positive values meaning an upward gradient.
+    Both functions output \texttt{CV\_16SC3} (signed short) because the
+    values can be negative and can go up to 1020 in magnitude.
+    We keep a separate variable for display and use \texttt{convertScaleAbs}
+    only for that, not for the filter output itself.
+    The magnitude image combines both directions:
+    $M = \sqrt{s_x^2 + s_y^2}$ per channel, clamped to 255.}
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 6 --- Blur and Quantize (Task 9)}
+\subsection*{Required Image 6 -- Blur and Quantize (Task 9)}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -217,101 +211,92 @@ bounds-checking overhead of \texttt{.at<>()}.}
     \hfill
     \begin{subfigure}[b]{0.48\textwidth}
         \includegraphics[width=\textwidth]{report_imgs/img6_blurquantize.png}
-        \caption{After \texttt{blurQuantize} (10 levels)}
+        \caption{\texttt{blurQuantize} with 10 levels}
     \end{subfigure}
-    \caption{Task 9 --- Blur and quantize (poster/cartoon effect).
-    \texttt{blurQuantize()} first applies \texttt{blur5x5\_2}, then
-    quantizes each channel into \texttt{levels} discrete values:
-    $\text{bucket} = 255 / \text{levels}$,
-    $x_t = \lfloor x / \text{bucket} \rfloor$,
+    \caption{Task 9: Blur then quantize. We first run \texttt{blur5x5\_2}
+    to smooth the image, then snap each channel to the nearest bucket value:
+    $\text{bucket} = 255 / \text{levels}$, $x_t = \lfloor x / \text{bucket} \rfloor$,
     $x_f = x_t \times \text{bucket}$.
-    With 10 levels, each channel can take 10 values,
-    yielding at most $10^3 = 1{,}000$ possible colors. The blur first
-    smooths fine texture so quantization produces clean, flat color bands
-    rather than noisy patches.}
+    With 10 levels per channel the image can have at most $10^3 = 1000$
+    distinct colors, which gives a cartoon or poster look. Blurring first
+    helps because without it the quantization looks noisy.}
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 7 --- Face Detection (Task 10)}
+\subsection*{Required Image 7 -- Face Detection (Task 10)}
 %------------------------------------------------------------
 
-% PARTNER SECTION --- insert screenshot from vidDisplay with 'f' key active
-\textit{[Image to be provided by Shyam Srinivasan --- press \texttt{f} in
-\texttt{vidDisplay} and save a frame with \texttt{s}.]}
+\textit{[Screenshot to be added by Shyam: press \texttt{f} in
+\texttt{vidDisplay}, then \texttt{s} to save.]}
 
 %------------------------------------------------------------
-\subsection*{Required Images 8--9 --- Depth Estimation (Task 11)}
+\subsection*{Required Images 8 and 9 -- Depth Estimation (Task 11)}
 %------------------------------------------------------------
 
-% PARTNER SECTION --- insert depth map and creative depth filter screenshot
-\textit{[Images to be provided by Shyam Srinivasan --- press \texttt{d}
-for depth map and \texttt{c} for depth-defocus filter.]}
+\textit{[Screenshots to be added by Shyam: press \texttt{d} for the depth
+map and \texttt{c} for the depth-defocus creative filter.]}
 
 %------------------------------------------------------------
-\subsection*{Required Images 10--12 --- Custom Effects (Task 12)}
+\subsection*{Required Images 10 to 12 -- Custom Effects (Task 12)}
 %------------------------------------------------------------
 
-% PARTNER SECTION --- insert negative, emboss, fog screenshots
-\textit{[Images to be provided by Shyam Srinivasan --- press \texttt{n},
-\texttt{e}, \texttt{o} respectively.]}
+\textit{[Screenshots to be added by Shyam: press \texttt{n}, \texttt{e},
+and \texttt{o} respectively.]}
+
+We chose three effects that each meet one of the requirements:
 
 \begin{description}
-    \item[Color Negative (\texttt{n}):] Pixel-wise inversion of each channel:
-        $\text{dst}[c] = 255 - \text{src}[c]$. No neighborhood access required.
-    \item[Emboss (\texttt{e}):] Uses the signed Sobel X and Y outputs from
-        Tasks 7--8 and takes a dot product with light direction
-        $(0.7071,\,0.7071)$, averaged across channels and shifted by $+128$.
-        Flat regions map to mid-grey; edges facing the light appear bright.
-    \item[Depth Fog (\texttt{o}):] Exponential fog using DA2 depth values.
-        Distance $= 1 - d/255$; fog amount $= 1 - e^{-k\,\cdot\,\text{distance}}$;
-        final color blends source with grey $(200,200,200)$.
-        Close objects stay clear; far objects fade to fog.
+    \item[Color Negative (\texttt{n}, pixel-wise):] Inverts every channel
+        value with $\text{dst}[c] = 255 - \text{src}[c]$. No neighbors
+        needed.
+    \item[Emboss (\texttt{e}, area-based):] Takes the signed Sobel X and Y
+        outputs from Tasks 7 and 8, computes their dot product with a light
+        direction of $(0.7071,\,0.7071)$, averages across the three channels,
+        then adds 128 so flat areas map to mid-grey.
+    \item[Depth Fog (\texttt{o}, uses depth):] Uses the DA2 depth map to
+        add exponential fog. The formula is $\text{fog} = 1 - e^{-k \cdot d}$
+        where $d = 1 - \text{depth}/255$. Close objects stay clear and far
+        objects fade toward a grey fog color.
 \end{description}
 
 % ============================================================
 \section*{Extensions}
 % ============================================================
 
-No formal extensions were pursued beyond the required tasks. The depth-based
-fog filter (Task 12c) could be considered a lightweight extension of Task 11,
-as it combines the DA2 depth map with a physically-motivated exponential
-atmospheric model rather than a simple threshold.
+We did not pursue formal extensions beyond the required tasks. The depth fog
+filter (Task 12c) builds directly on Task 11 using a physically-based model
+for atmospheric scattering rather than a simple depth threshold, so it could
+count as a small extension of that task.
 
 % ============================================================
 \section*{Reflection}
 % ============================================================
 
-% TODO (Shriman): Write 3-5 sentences in your own words covering what you
-% personally learned from Tasks 4-9.
-%
-% Suggested points:
-% - Direct pixel access via row pointers vs .at<> and the real performance difference
-% - How separable filters reduce computational complexity
-% - Understanding signed 16-bit images (why Sobel needs CV_16SC3)
-% - How blurring before quantizing produces cleaner posterization than raw quantize
-% - Anything surprising you found while debugging (e.g. Sobel X shows vertical edges)
+% TODO (Shriman): Write 3-5 sentences in your own words about what you learned
+% from doing Tasks 4-9. Keep it honest and conversational. Some ideas:
+%   - What surprised you about working at the pixel level?
+%   - What did the speed difference between blur5x5_1 and blur5x5_2 teach you?
+%   - What was confusing or interesting about the Sobel filter output?
+%   - How did this change how you think about image filters?
 
-\textit{[To be completed by Shriman Raghav Srinivasan.]}
+\textit{[To be written by Shriman Raghav Srinivasan.]}
 
 % ============================================================
 \section*{Acknowledgements}
 % ============================================================
 
 \begin{itemize}
-    \item \textbf{OpenCV documentation} ---
-        \url{https://docs.opencv.org/4.x/} for pixel access patterns,
-        \texttt{cvtColor} channel weighting (ITU-R BT.601), and
-        \texttt{convertScaleAbs} usage.
-    \item \textbf{Partner} --- Shyam Srinivasan implemented Tasks 1--3,
-        10--11, and 12 (face detection, Depth Anything V2 integration,
-        color negative, emboss, and depth fog).
-    \item \textbf{AI assistant} --- Antigravity (powered by Claude Sonnet,
-        Anthropic) was used to implement and debug the Tasks 4--9 filter
-        functions in \texttt{filter.cpp} / \texttt{filter.h}, write the
-        unified \texttt{vidDisplay.cpp} keypress loop, and configure the
-        CMake build system. The core algorithmic logic (filter kernels,
-        separable decomposition, Sobel signs, quantization formula) was
-        derived from the assignment specification.
+    \item OpenCV documentation (\url{https://docs.opencv.org/4.x/}) for
+        the \texttt{cvtColor} channel weights and pixel access patterns.
+    \item Shyam Srinivasan implemented Tasks 1 through 3 and Tasks 10
+        through 12 (face detection, Depth Anything V2, and the three
+        custom effects).
+    \item We used an AI assistant (Antigravity, powered by Claude from
+        Anthropic) to help implement the filter functions in
+        \texttt{filter.cpp}, set up the unified \texttt{vidDisplay.cpp}
+        loop, and configure the CMake build. The algorithm details
+        (kernel values, separable decomposition, Sobel signs, quantization
+        formula) all came directly from the assignment specification.
 \end{itemize}
 
 \end{document}
