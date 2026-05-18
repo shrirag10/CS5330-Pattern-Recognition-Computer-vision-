@@ -44,7 +44,7 @@ int sepia(cv::Mat &src, cv::Mat &dst);
  * Kernel: [1 2 4 2 1; 2 4 8 4 2; 4 8 16 8 4; 2 4 8 4 2; 1 2 4 2 1] (sum=100).
  * Outer 2 rows/cols are copied from src unchanged.
  *
- * @param src  Input color image (CV_8UC3, BGR) — not modified
+ * @param src  Input color image (CV_8UC3, BGR) - not modified
  * @param dst  Output blurred image (CV_8UC3, BGR)
  * @return 0 on success, -1 on error
  */
@@ -55,7 +55,7 @@ int blur5x5_1(cv::Mat &src, cv::Mat &dst);
  * Applies filter [1 2 4 2 1] (sum=10) horizontally, then vertically.
  * Avoids the slow .at<> accessor. Outer 2 rows/cols copied from src.
  *
- * @param src  Input color image (CV_8UC3, BGR) — not modified
+ * @param src  Input color image (CV_8UC3, BGR) - not modified
  * @param dst  Output blurred image (CV_8UC3, BGR)
  * @return 0 on success, -1 on error
  */
