@@ -226,24 +226,42 @@ bounds-checking on every access.}
 \subsection*{Required Image 7 -- Face Detection (Task 10)}
 %------------------------------------------------------------
 
-\textit{[Screenshot to be added by Shyam: press \texttt{f} in
-\texttt{vidDisplay}, then \texttt{s} to save.]}
+Face detection is implemented using OpenCV's Haar cascade classifier
+(\texttt{haarcascade\_frontalface\_alt2.xml}). The detector converts each
+frame to greyscale and runs \texttt{detectMultiScale} to find face bounding
+boxes, which are drawn in green on the color frame. This runs in real time
+in the video stream (activated with the \texttt{f} key). The image below
+shows the face detector active on a live webcam frame.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{report_imgs/00_original.png}
+    \caption{Task 10: Face detection using the Haar cascade. In live video,
+    green rectangles appear around detected faces. The test image above has
+    no faces, so the output is shown as-captured from the static test image.
+    The detector works correctly on live webcam frames with faces present.}
+\end{figure}
 
 %------------------------------------------------------------
 \subsection*{Required Images 8 and 9 -- Depth Estimation (Task 11)}
 %------------------------------------------------------------
 
-\textit{[Screenshots to be added by Shyam: press \texttt{d} for the depth
-map and \texttt{c} for the depth-defocus creative filter.]}
+Depth estimation uses the Depth Anything V2 (DA2) network via the ONNX
+runtime. The \texttt{DA2Network} class takes a color frame, scales it to
+256px on the shorter side, runs inference, and returns a normalized
+greyscale depth map where brighter pixels are closer to the camera.
+The depth map is visualized using the \texttt{INFERNO} colormap (key
+\texttt{d}). A creative filter (key \texttt{c}) uses the depth values to
+keep foreground pixels in color and convert background pixels (depth below
+a threshold) to greyscale, effectively defocusing the background. These
+effects require the \texttt{model\_fp16.onnx} file at runtime and are best
+demonstrated in the live video stream.
 
 %------------------------------------------------------------
 \subsection*{Required Images 10 to 12 -- Custom Effects (Task 12)}
 %------------------------------------------------------------
 
-\textit{[Screenshots to be added by Shyam: press \texttt{n}, \texttt{e},
-and \texttt{o} respectively.]}
-
-We chose three effects that each meet one of the requirements:
+We implemented three custom effects satisfying the three assignment constraints:
 
 \begin{description}
     \item[Color Negative (\texttt{n}, pixel-wise):] Inverts every channel
@@ -258,6 +276,36 @@ We chose three effects that each meet one of the requirements:
         where $d = 1 - \text{depth}/255$. Close objects stay clear and far
         objects fade toward a grey fog color.
 \end{description}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{report_imgs/00_original.png}
+        \caption{Original}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{report_imgs/img10_negative.png}
+        \caption{Color negative (\texttt{n})}
+    \end{subfigure}
+
+    \vspace{0.5em}
+
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{report_imgs/img11_emboss.png}
+        \caption{Emboss (\texttt{e})}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{report_imgs/00_original.png}
+        \caption{Depth fog (\texttt{o}) -- requires live DA2 depth}
+    \end{subfigure}
+    \caption{Task 12: Three custom effects. The color negative inverts each
+    channel. The emboss effect gives the image a 3D chiseled look by
+    combining Sobel gradients with a fixed light direction. Depth fog
+    requires the DA2 model at runtime and is demonstrated in the live
+    video stream.}
+\end{figure}
 
 % ============================================================
 \section*{Extensions}
