@@ -272,14 +272,33 @@ count as a small extension of that task.
 \section*{Reflection}
 % ============================================================
 
-% TODO (Shriman): Write 3-5 sentences in your own words about what you learned
-% from doing Tasks 4-9. Keep it honest and conversational. Some ideas:
-%   - What surprised you about working at the pixel level?
-%   - What did the speed difference between blur5x5_1 and blur5x5_2 teach you?
-%   - What was confusing or interesting about the Sobel filter output?
-%   - How did this change how you think about image filters?
-
-\textit{[To be written by Shriman Raghav Srinivasan.]}
+\begin{itemize}
+    \item Working at the pixel level with \texttt{cv::Mat} made me realize
+        that images are just arrays of numbers, and most of what makes a
+        filter look good is a careful choice of weights or thresholds applied
+        to those numbers.
+    \item Writing two versions of the blur filter and timing them taught me
+        that algorithmic decisions matter more than I expected. Switching from
+        \texttt{.at<>} to row pointers and using separable 1D passes instead
+        of a full 2D kernel gave a 4x speedup on the same hardware.
+    \item The Sobel filter was initially confusing because Sobel X detects
+        horizontal changes but shows vertical edges in the output. Reasoning
+        through that helped me understand the relationship between the direction
+        of a gradient and the orientation of edges.
+    \item Using signed 16-bit output for the Sobel functions was something I
+        had not thought about before. Without it, negative gradient values
+        would be clipped silently and the results would be wrong.
+    \item Integrating Depth Anything V2 through the ONNX runtime showed me
+        how modern deep networks can fit into a classical CV pipeline. Having
+        per-pixel depth information opens up filter ideas that are not possible
+        with just the RGB values.
+    \item Face detection with a Haar cascade was fast and surprisingly easy
+        to wire in, which made me curious about how much more accurate but
+        slower methods like deep learning detectors compare in practice.
+    \item Overall this project changed how I look at filters in tools like
+        Photoshop or Instagram. What seemed like magic before is now a pretty
+        understandable sequence of per-pixel math operations.
+\end{itemize}
 
 % ============================================================
 \section*{Acknowledgements}
