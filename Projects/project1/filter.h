@@ -1,6 +1,6 @@
 /*
  * CS5330 Computer Vision - Project 1
- * Authors: [Your Name], Shyam S (shyams612)
+ * Authors: Shriman Raghav Srinivasan, Shyam Srinivasan
  * Date: May 2026
  *
  * Purpose: Declares all image processing and filter functions for Project 1.
