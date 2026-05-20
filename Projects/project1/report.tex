@@ -8,12 +8,13 @@
 \usepackage{parskip}
 \usepackage{float}
 \usepackage{microtype}
+\usepackage{amsmath}
 
 \hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
 
 \title{\textbf{CS5330 Computer Vision -- Project 1}\\
        \large Image Manipulation and Video Filtering}
-\author{Shriman Raghav Srinivasan \and Shyam Srinivasan}
+\author{Shriman Raghav Srinivasan \and Shyam Sreenivasan}
 \date{May 2026}
 
 \begin{document}
@@ -41,22 +42,73 @@ split the work: Shriman handled Tasks 4 through 9 (filters.cpp) and Shyam
 handled the rest.
 
 % ============================================================
-\section*{Required Images and Results}
+\section*{Key Mapping}
+% ============================================================
+
+\begin{table}[H]
+\centering
+\begin{tabular}{clc}
+\toprule
+\textbf{Task} & \textbf{Description} & \textbf{Key} \\
+\midrule
+1   & Static image display             & -- \\
+2   & Live color video                 & (default) \\
+3   & OpenCV greyscale                 & \texttt{g} \\
+4   & Custom greyscale (blue emphasis) & \texttt{h} \\
+5   & Sepia tone                       & \texttt{p} \\
+6   & 5x5 Gaussian blur                & \texttt{b} \\
+7   & Sobel X / Sobel Y                & \texttt{x} / \texttt{y} \\
+8   & Gradient magnitude               & \texttt{m} \\
+9   & Blur and quantize                & \texttt{l} \\
+10  & Haar cascade face detection      & \texttt{f} \\
+11  & Depth map / depth defocus        & \texttt{d} / \texttt{c} \\
+12a & Color negative                   & \texttt{n} \\
+12b & Emboss                           & \texttt{e} \\
+12c & Depth-based fog                  & \texttt{o} \\
+\bottomrule
+\end{tabular}
+\caption{Key mapping for \texttt{vidDisplay}. Press \texttt{s} to save the
+current frame and \texttt{q} to quit.}
+\end{table}
+
+% ============================================================
+\section*{Results}
 % ============================================================
 
 %------------------------------------------------------------
-\subsection*{Required Image 1 -- OpenCV Greyscale (Task 3)}
+\subsection*{Task 1 -- Image Display}
+%------------------------------------------------------------
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{report_imgs/00_original.png}
+    \caption{Task 1: Static image displayed using \texttt{cv::imshow}.}
+\end{figure}
+
+%------------------------------------------------------------
+\subsection*{Task 2 -- Live Color Video}
+%------------------------------------------------------------
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{report_imgs/img2.png}
+    \caption{Task 2: Live color video frame from the webcam displayed using
+    \texttt{cv::imshow}.}
+\end{figure}
+
+%------------------------------------------------------------
+\subsection*{Task 3 -- OpenCV Greyscale}
 %------------------------------------------------------------
 
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{0.48\textwidth}
-        \includegraphics[width=\textwidth]{report_imgs/00_original.png}
+        \includegraphics[width=\textwidth]{report_imgs/img2.png}
         \caption{Original color frame}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.48\textwidth}
-        \includegraphics[width=\textwidth]{report_imgs/img1a_opencv_grey.png}
+        \includegraphics[width=\textwidth]{report_imgs/img3.png}
         \caption{\texttt{cvtColor} greyscale output}
     \end{subfigure}
     \caption{Task 3: Standard greyscale using \texttt{cv::COLOR\_BGR2GRAY}.
@@ -67,7 +119,7 @@ handled the rest.
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 2 -- Custom Greyscale (Task 4)}
+\subsection*{Task 4 -- Custom Greyscale}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -91,7 +143,7 @@ handled the rest.
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 3 -- Sepia Tone (Task 5)}
+\subsection*{Task 5 -- Sepia Tone}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -118,7 +170,7 @@ handled the rest.
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 4 -- 5x5 Gaussian Blur (Task 6)}
+\subsection*{Task 6 -- 5x5 Gaussian Blur}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -158,7 +210,7 @@ bounds-checking on every access.}
 \end{table}
 
 %------------------------------------------------------------
-\subsection*{Required Images 5 -- Sobel Filters and Gradient Magnitude (Tasks 7 and 8)}
+\subsection*{Tasks 7 and 8 -- Sobel Filters and Gradient Magnitude}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -199,7 +251,7 @@ bounds-checking on every access.}
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 6 -- Blur and Quantize (Task 9)}
+\subsection*{Task 9 -- Blur and Quantize}
 %------------------------------------------------------------
 
 \begin{figure}[H]
@@ -223,25 +275,50 @@ bounds-checking on every access.}
 \end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Image 7 -- Face Detection (Task 10)}
+\subsection*{Task 10 -- Face Detection}
 %------------------------------------------------------------
 
-\textit{[Screenshot to be added by Shyam: press \texttt{f} in
-\texttt{vidDisplay}, then \texttt{s} to save.]}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{report_imgs/img10_after_fd.png}
+    \caption{Task 10: Haar cascade face detection. Detected faces are highlighted
+    with bounding boxes drawn using \texttt{drawBoxes}. The cascade classifier
+    runs on a greyscale version of the frame and the boxes are overlaid on the
+    original color frame.}
+\end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Images 8 and 9 -- Depth Estimation (Task 11)}
+\subsection*{Task 11 -- Depth Estimation}
 %------------------------------------------------------------
 
-\textit{[Screenshots to be added by Shyam: press \texttt{d} for the depth
-map and \texttt{c} for the depth-defocus creative filter.]}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{report_imgs/img11_depth.png}
+    \caption{Task 11: Depth Anything V2 depth map rendered with the INFERNO
+    colormap. Brighter regions are closer to the camera; darker regions are
+    farther away.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{report_imgs/img11_close_color.png}
+        \caption{Close foreground stays in color}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{report_imgs/img11_far_gray.png}
+        \caption{Far background converted to greyscale}
+    \end{subfigure}
+    \caption{Task 11 creative filter: depth-based background greyscale.
+    Pixels with depth above the threshold (close objects) remain in color
+    while pixels below the threshold (far background) are converted to
+    greyscale.}
+\end{figure}
 
 %------------------------------------------------------------
-\subsection*{Required Images 10 to 12 -- Custom Effects (Task 12)}
+\subsection*{Task 12 -- Custom Effects}
 %------------------------------------------------------------
-
-\textit{[Screenshots to be added by Shyam: press \texttt{n}, \texttt{e},
-and \texttt{o} respectively.]}
 
 We chose three effects that each meet one of the requirements:
 
@@ -258,6 +335,29 @@ We chose three effects that each meet one of the requirements:
         where $d = 1 - \text{depth}/255$. Close objects stay clear and far
         objects fade toward a grey fog color.
 \end{description}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{report_imgs/img12a_negative.png}
+    \caption{Task 12a: Color negative. Each channel is inverted with
+    $\text{dst}[c] = 255 - \text{src}[c]$.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{report_imgs/img12b_emboss.png}
+    \caption{Task 12b: Emboss effect. Sobel X and Y outputs are combined
+    with a light direction of $(0.7071,\,0.7071)$ and offset by 128 so
+    flat areas map to mid-grey.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{report_imgs/img12c_depthfog.png}
+    \caption{Task 12c: Depth-based exponential fog. Close objects remain
+    clear while far objects fade toward a grey fog color using
+    $\text{fog} = 1 - e^{-k \cdot d}$ where $d = 1 - \text{depth}/255$.}
+\end{figure}
 
 % ============================================================
 \section*{Extensions}
@@ -311,9 +411,11 @@ count as a small extension of that task.
         the custom greyscale, sepia tone, both blur implementations, Sobel X
         and Y filters, gradient magnitude, and blur-and-quantize functions in
         \texttt{filter.cpp} and \texttt{filter.h}.
-    \item Shyam Srinivasan implemented Tasks 1 through 3 and Tasks 10
-        through 12 (face detection, Depth Anything V2, and the three
-        custom effects).
+    \item Shyam Sreenivasan handled initial project setup including environment
+        configuration, package installation, and validation of dependencies
+        (OpenCV, ONNX runtime, Depth Anything V2). He also implemented Tasks 1
+        through 3 and Tasks 10 through 12 (face detection, Depth Anything V2,
+        and the three custom effects).
     \item We used Claude (Anthropic) as an AI assistant to help set up the
         initial code structure and for debugging during development.
 \end{itemize}
