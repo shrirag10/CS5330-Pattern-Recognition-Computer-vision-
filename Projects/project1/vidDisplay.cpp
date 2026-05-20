@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     float da2_scale = 256.0f / std::min(refS.width, refS.height);
 
     cv::namedWindow("Video", 1);
-    std::filesystem::create_directories("saved");
+    std::filesystem::create_directories("../saved");
 
     cv::Mat frame;
     char mode = ' ';  // currently active filter; ' ' = no filter
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
             char timestamp[32];
             std::strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S",
                           std::localtime(&t));
-            std::string filename = std::string("saved/frame_") + timestamp + ".png";
+            std::string filename = std::string("../saved/frame_") + timestamp + ".png";
             cv::imwrite(filename, display);
             printf("Saved: %s\n", filename.c_str());
 
