@@ -36,8 +36,11 @@ int main(int argc, char* argv[]) {
 
     std::vector<ImageMatch> matches;
 
+    std::string targetName = fs::path(targetPath).filename().string();
+
     for (const auto& entry : fs::directory_iterator(dbDir)) {
         if (!entry.is_regular_file()) continue;
+        if (entry.path().filename().string() == targetName) continue;
 
         std::string path = entry.path().string();
         cv::Mat img = cv::imread(path);

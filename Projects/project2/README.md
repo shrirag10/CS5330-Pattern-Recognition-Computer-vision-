@@ -2,12 +2,34 @@
 
 ---
 
+## Project Structure
+
+```
+project2/
+├── CMakeLists.txt
+├── main.cpp
+├── Featurizer.h              # Abstract base class for feature extraction
+├── FeaturizerImpl.h          # BaselineFeaturizer implementation
+├── SimilarityScoring.h       # Abstract base class for distance scoring
+├── SimilarityScoringImpl.h   # SSDScoring implementation
+├── olympus/                  # Full image database (1107 images)
+└── build/                    # Compiled binaries
+```
+
+---
+
+## Dataset Setup
+
+Download the image database and place all images in the `olympus/` folder. This serves as the full search database.
+
+---
+
 ## Task 1: Baseline Matching (7x7 center patch + SSD)
 
 ### How it works
 
 1. Load the target image and extract its feature vector using `BaselineFeaturizer`
-2. For each image in the database directory, extract its feature vector
+2. For each image in the database directory (skipping the target itself), extract its feature vector
 3. Compute the SSD score between the target and each database image
 4. Sort all results by score (ascending) and print the top 5
 
@@ -58,16 +80,16 @@ make
 ### Example
 
 ```bash
-./match ../target/pic.0014.jpg ../olympus
+./match ../olympus/pic.1016.jpg ../olympus
 ```
 
 ### Example output
 
 ```
-Top 5 matches for: pic.0014.jpg
-1. pic.0737.jpg  (SSD: 126017)
-2. pic.0025.jpg  (SSD: 133478)
-3. pic.0914.jpg  (SSD: 161278)
-4. pic.0017.jpg  (SSD: 171435)
-5. pic.0282.jpg  (SSD: 177583)
+Top 5 matches for: pic.1016.jpg
+1. pic.0986.jpg  (SSD: ...)
+2. pic.0641.jpg  (SSD: ...)
+3. pic.0547.jpg  (SSD: ...)
+4. pic.1013.jpg  (SSD: ...)
+5. ...
 ```
