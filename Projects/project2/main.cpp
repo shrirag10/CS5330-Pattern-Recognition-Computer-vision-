@@ -15,13 +15,15 @@ struct ImageMatch {
 };
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: ./featurize <target_image> <database_dir>\n";
+    if (argc < 4) {
+        std::cerr << "Usage: ./match <target_image> <database_dir> <method>\n";
+        std::cerr << "Methods: baseline, histogram\n";
         return 1;
     }
 
     std::string targetPath = argv[1];
     std::string dbDir = argv[2];
+    std::string method = argv[3];
 
     cv::Mat targetImg = cv::imread(targetPath);
     if (targetImg.empty()) {
@@ -29,27 +31,37 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    BaselineFeaturizer featurizer;
-    SSDScoring scorer;
+    // pick featurizer and scorer based on method
+    Featurizer* featurizer = nullptr;
+    SimilarityScoring* scorer = nullptr;
 
-    std::vector<float> targetFeatures = featurizer.featurize(targetImg);
+    if (method == "baseline") {
+        featurizer = new BaselineFeaturizer();
+        scorer = new SSDScoring();
+    } else if (method == "histogram") {
+        featurizer = new HistogramFeaturizer();
+        scorer = new HistogramIntersectionScoring();
+    } else {
+        std::cerr << "Unknown method: " << method << ". Use 'baseline' or 'histogram'.\n";
+        return 1;
+    }
+
+    std::vector<float> targetFeatures = featurizer->featurize(targetImg);
+    std::string targetName = fs::path(targetPath).filename().string();
 
     std::vector<ImageMatch> matches;
-
-    std::string targetName = fs::path(targetPath).filename().string();
 
     for (const auto& entry : fs::directory_iterator(dbDir)) {
         if (!entry.is_regular_file()) continue;
         if (entry.path().filename().string() == targetName) continue;
 
-        std::string path = entry.path().string();
-        cv::Mat img = cv::imread(path);
+        cv::Mat img = cv::imread(entry.path().string());
         if (img.empty()) continue;
 
         ImageMatch match;
         match.name = entry.path().filename().string();
-        match.features = featurizer.featurize(img);
-        match.score = scorer.score(targetFeatures, match.features);
+        match.features = featurizer->featurize(img);
+        match.score = scorer->score(targetFeatures, match.features);
         matches.push_back(match);
     }
 
@@ -57,10 +69,13 @@ int main(int argc, char* argv[]) {
         return a.score < b.score;
     });
 
-    std::cout << "Top 5 matches for: " << fs::path(targetPath).filename().string() << "\n";
+    std::cout << "Top 5 matches for: " << targetName << " (method: " << method << ")\n";
     for (int i = 0; i < 5 && i < (int)matches.size(); i++) {
-        std::cout << i + 1 << ". " << matches[i].name << "  (SSD: " << matches[i].score << ")\n";
+        std::cout << i + 1 << ". " << matches[i].name << "  (score: " << matches[i].score << ")\n";
     }
+
+    delete featurizer;
+    delete scorer;
 
     return 0;
 }
