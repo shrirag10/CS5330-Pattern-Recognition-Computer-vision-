@@ -11,7 +11,7 @@ project2/
 ├── Featurizer.h              # Abstract base class for feature extraction
 ├── FeaturizerImpl.h          # BaselineFeaturizer implementation
 ├── SimilarityScoring.h       # Abstract base class for distance scoring
-├── SimilarityScoringImpl.h   # SSDScoring and HistogramIntersectionScoring implementations
+├── SimilarityScoringImpl.h   # SSDScoring, HistogramIntersectionScoring, MultiHistogramScoring implementations
 ├── olympus/                  # Full image database (1107 images)
 └── build/                    # Compiled binaries
 ```
@@ -149,4 +149,80 @@ Top 5 matches for: pic.0164.jpg (method: histogram)
 3. pic.1032.jpg  (score: -0.337152)
 4. pic.0426.jpg  (score: -0.30144)
 5. pic.0080.jpg  (score: -0.283518)
+```
+
+---
+
+## Task 3: Multi-histogram Matching (3x3 spatial grid + weighted histogram intersection)
+
+### How it works
+
+1. Divide both images into a **3×3 grid** of 9 regions
+2. For each region, compute a 3D color histogram (8 bins per channel = 512 values)
+3. Compare corresponding regions between the two images using histogram intersection
+4. Combine the 9 region scores using a weighting scheme
+5. Sort by final score (ascending) and print the top 5
+
+### Feature extraction (`MultiHistogramFeaturizer`)
+
+Divides the image into a 3×3 grid and computes a normalized 3D histogram per region:
+
+```
+grid layout:
++-------+-------+-------+
+|  TL   |  TC   |  TR   |
++-------+-------+-------+
+|  ML   |  CTR  |  MR   |
++-------+-------+-------+
+|  BL   |  BC   |  BR   |
++-------+-------+-------+
+
+bins per channel = 8
+cells per region = 8 × 8 × 8 = 512
+total features   = 9 × 512 = 4608 values
+```
+
+### Distance metrics
+
+Two variants are available:
+
+**`MultiHistogramScoring` (equal weights):**
+Each of the 9 regions contributes equally (weight = 1/9).
+
+**`MultiHistogramCenterWeightedScoring` (center-heavy):**
+```
+corners (TL, TR, BL, BR) → 0.05 each
+edges   (TC, ML, MR, BC) → 0.075 each
+center  (CTR)            → 0.50
+```
+
+### Discussion: equal vs center-weighted
+
+For landscape images where content is spread across the whole frame (e.g. `pic.0274.jpg`), **equal weighting produces better results** — the center-heavy approach over-focuses on one region and misses the global spatial color layout, leading to false matches.
+
+### Run
+
+```bash
+# equal weights
+./match <target_image> <database_dir> multihistogram
+
+# center-heavy weights
+./match <target_image> <database_dir> multihistogram-weighted
+```
+
+### Example
+
+```bash
+./match ../olympus/pic.0274.jpg ../olympus multihistogram
+```
+
+### Example output
+
+```
+Top 5 matches for: pic.0274.jpg (method: multihistogram)
+1. pic.0273.jpg  (score: -0.571089)
+2. pic.1031.jpg  (score: -0.519946)
+3. pic.0409.jpg  (score: -0.517759)
+4. pic.0275.jpg  (score: -0.49662)
+5. pic.0991.jpg  (score: -0.485229)
 ```

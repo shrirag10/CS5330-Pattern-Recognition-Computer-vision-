@@ -41,8 +41,14 @@ int main(int argc, char* argv[]) {
     } else if (method == "histogram") {
         featurizer = new HistogramFeaturizer();
         scorer = new HistogramIntersectionScoring();
+    } else if (method == "multihistogram") {
+        featurizer = new MultiHistogramFeaturizer();
+        scorer = new MultiHistogramScoring();
+    } else if (method == "multihistogram-weighted") {
+        featurizer = new MultiHistogramFeaturizer();
+        scorer = new MultiHistogramCenterWeightedScoring();
     } else {
-        std::cerr << "Unknown method: " << method << ". Use 'baseline' or 'histogram'.\n";
+        std::cerr << "Unknown method: " << method << ". Use 'baseline', 'histogram', 'multihistogram', or 'multihistogram-weighted'.\n";
         return 1;
     }
 
