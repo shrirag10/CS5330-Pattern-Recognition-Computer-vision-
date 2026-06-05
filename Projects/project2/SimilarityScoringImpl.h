@@ -85,19 +85,22 @@ private:
 // Negated so that lower score = more similar (consistent with all other scorers).
 class TextureColorScoring : public SimilarityScoring {
 public:
-    // colorHistSize = colorBins^3 (default 8^3=512), textureBins = 16
-    TextureColorScoring(int colorHistSize = 512, int textureBins = 16)
-        : colorHistSize(colorHistSize), textureBins(textureBins) {}
+    // textureBins defaults to 16, colorHistSize is dynamically calculated as vector_size - textureBins
+    TextureColorScoring(int textureBins = 16) : textureBins(textureBins) {}
 
     float score(const std::vector<float>& a, const std::vector<float>& b) override {
+        int totalSize = (int)a.size();
+        int colorHistSize = totalSize - textureBins;
+        if (colorHistSize < 0) colorHistSize = 0; // Guard against small vectors
+
         // color sub-histogram intersection
         float colorIntersect = 0.0f;
-        for (int i = 0; i < colorHistSize; i++)
+        for (int i = 0; i < colorHistSize && i < (int)b.size(); i++)
             colorIntersect += std::min(a[i], b[i]);
 
         // texture sub-histogram intersection
         float textureIntersect = 0.0f;
-        for (int i = 0; i < textureBins; i++)
+        for (int i = 0; i < textureBins && (colorHistSize + i) < totalSize && (colorHistSize + i) < (int)b.size(); i++)
             textureIntersect += std::min(a[colorHistSize + i], b[colorHistSize + i]);
 
         // equal weighting: 0.5 color + 0.5 texture
@@ -106,7 +109,6 @@ public:
     }
 
 private:
-    int colorHistSize;
     int textureBins;
 };
 

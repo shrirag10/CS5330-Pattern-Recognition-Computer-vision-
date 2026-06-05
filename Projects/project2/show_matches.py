@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-show_matches.py -- visual result viewer for the CS5330 Project 2 match binary.
+show_matches.py - visual result viewer for the CS5330 Project 2 match binary.
 
 Usage:
     python3 show_matches.py <target_image> <database_dir> <method> [N]

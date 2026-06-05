@@ -1,6 +1,8 @@
 #pragma once
 #include "Featurizer.h"
 #include <cmath>
+#include <map>
+#include <string>
 
 class BaselineFeaturizer : public Featurizer {
 public:
@@ -182,8 +184,9 @@ private:
         // Sobel 3x3 kernels:
         // Kx = [[-1,0,1],[-2,0,2],[-1,0,1]]   Ky = [[-1,-2,-1],[0,0,0],[1,2,1]]
         // skip 1-pixel border
-        // max possible magnitude for 8-bit image: sqrt((4*255)^2+(4*255)^2) ~= 1442
-        float maxMag = std::sqrt(2.0f) * 4.0f * 255.0f; // ~1441.6
+        // Max actual possible magnitude: sqrt((2*255)^2 + (4*255)^2) = 510 * sqrt(5) ~= 1140.39f
+        // (occurs e.g. when Gx = 1020, Gy = 510)
+        float maxMag = 510.0f * std::sqrt(5.0f); // ~1140.39f
 
         std::vector<float> hist(textureBins, 0.0f);
         int count = 0;
@@ -203,7 +206,54 @@ private:
                 count++;
             }
         }
-        for (float& v : hist) v /= count;
+        if (count > 0) {
+            for (float& v : hist) v /= count;
+        }
         return hist;
     }
+};
+
+// Task 5: DNN Embedding Featurizer (loads precomputed embeddings from CSV features map)
+class DnnFeaturizer : public Featurizer {
+public:
+    DnnFeaturizer(const std::map<std::string, std::vector<float>>& dnnFeatures)
+        : dnnFeatures(dnnFeatures) {}
+
+    std::vector<float> featurize(const cv::Mat& /*image*/) override {
+        return std::vector<float>(512, 0.0f); // Fallback if filename not provided
+    }
+
+    std::vector<float> featurize(const cv::Mat& /*image*/, const std::string& filename) override {
+        auto it = dnnFeatures.find(filename);
+        if (it != dnnFeatures.end()) {
+            return it->second;
+        }
+        return std::vector<float>(512, 0.0f);
+    }
+
+private:
+    const std::map<std::string, std::vector<float>>& dnnFeatures;
+};
+
+// Task 7: Custom Combined color + DNN Featurizer
+class CustomFeaturizer : public Featurizer {
+public:
+    CustomFeaturizer(const std::map<std::string, std::vector<float>>& dnnFeatures)
+        : dnnFeaturizer(dnnFeatures), colorFeaturizer(8) {}
+
+    std::vector<float> featurize(const cv::Mat& image) override {
+        return featurize(image, "");
+    }
+
+    std::vector<float> featurize(const cv::Mat& image, const std::string& filename) override {
+        std::vector<float> colorPart = colorFeaturizer.featurize(image);
+        std::vector<float> dnnPart   = dnnFeaturizer.featurize(image, filename);
+        std::vector<float> combined  = colorPart;
+        combined.insert(combined.end(), dnnPart.begin(), dnnPart.end());
+        return combined;
+    }
+
+private:
+    DnnFeaturizer dnnFeaturizer;
+    HistogramFeaturizer colorFeaturizer;
 };
