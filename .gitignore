@@ -1,0 +1,21 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.out
+
+# Large dataset files — download locally, never commit
+Projects/project2/olympus/*.jpg
+Projects/project2/olympus/*.png
+Projects/project2/*.csv
+
+# LaTeX aux files
+*.aux
+*.log
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# IDE
+.vscode/
+.idea/
