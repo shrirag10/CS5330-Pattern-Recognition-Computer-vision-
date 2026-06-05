@@ -176,9 +176,9 @@ We concatenate two normalized histograms as the feature vector. The color part
 is a whole-image 3D BGR histogram with 8 bins per channel (512 values). The
 texture part is a Sobel gradient magnitude histogram with 16 bins (16 values).
 The Sobel kernels are applied manually from scratch on a manual grayscale
-conversion -- no \texttt{cv::Sobel} or \texttt{cv::calcHist} used. Each pixel's
+conversion; no \texttt{cv::Sobel} or \texttt{cv::calcHist} was used. Each pixel's
 gradient magnitude $M = \sqrt{G_x^2 + G_y^2}$ is binned into 16 equally spaced
-bins across the range $[0, \sqrt{2} \cdot 4 \cdot 255]$.
+bins across the range $[0, 510 \cdot \sqrt{5}]$.
 
 The distance metric computes histogram intersection on each sub-histogram
 independently and averages them with equal weight:
@@ -200,20 +200,20 @@ D = -\bigl(0.5 \cdot \text{colorIntersect} + 0.5 \cdot \text{textureIntersect}\b
     \hfill
     \begin{subfigure}[b]{0.22\textwidth}
         \includegraphics[width=\textwidth]{report_imgs/pic.0605.jpg}
-        \caption{Match 2\\pic.0605\\score: $-0.825$}
+        \caption{Match 2\\pic.0605\\score: $-0.823$}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{report_imgs/pic.0171.jpg}
-        \caption{Match 3\\pic.0171\\score: $-0.824$}
+        \includegraphics[width=\textwidth]{report_imgs/pic.0708.jpg}
+        \caption{Match 3\\pic.0708\\score: $-0.823$}
     \end{subfigure}
     \caption{Task 4: Top 3 matches for \texttt{pic.0535.jpg} using color
-    + texture (Sobel magnitude) histograms with equal weighting.}
+    + texture (Sobel gradient magnitude) histograms with equal weighting.}
 \end{figure}
 
 The scores for Task 4 are notably compressed (all around $-0.825$) compared to
 Tasks 2 and 3. This happens because the texture histogram is dominated by low
-gradient bins -- most natural images have lots of smooth regions and few strong
+gradient bins; most natural images have lots of smooth regions and few strong
 edges. As a result the texture intersection tends to be high for nearly all
 image pairs, which pulls all scores toward a narrow range.
 
@@ -263,7 +263,7 @@ stay in $[0, 1]$.
         \caption{Match 3\\pic.0146\\score: $0.225$}
     \end{subfigure}
     \caption{Task 5: Top 3 matches for \texttt{pic.0893.jpg} using ResNet18
-    cosine distance. The results make sense -- the DNN has learned to group
+    cosine distance. The results make sense because the DNN has learned to group
     semantically similar scenes together regardless of color or lighting.}
 \end{figure}
 
@@ -298,8 +298,8 @@ stay in $[0, 1]$.
 \subsection*{Task 6: DNN Embeddings vs.\ Classic Features}
 %------------------------------------------------------------
 
-We compare ResNet18 cosine distance against 3D histogram intersection on two
-images: \texttt{pic.1072.jpg} and \texttt{pic.0948.jpg}.
+We compare ResNet18 cosine distance against 3D histogram intersection on two target
+images, \texttt{pic.1072.jpg} and \texttt{pic.0948.jpg}.
 
 \begin{figure}[H]
     \centering
@@ -322,7 +322,7 @@ images: \texttt{pic.1072.jpg} and \texttt{pic.0948.jpg}.
         \includegraphics[width=\textwidth]{report_imgs/pic.0329.jpg}
         \caption{DNN \#3\\pic.0329\\0.207}
     \end{subfigure}
-    \caption{Task 6a: \texttt{pic.1072.jpg} -- DNN top 3. The histogram method
+    \caption{Task 6a: \texttt{pic.1072.jpg} (DNN top 3). The histogram method
     returned pic.0937 as its top hit (a false match by color alone) while the
     DNN correctly prioritized semantically similar scenes. DNN wins here.}
 \end{figure}
@@ -348,9 +348,9 @@ images: \texttt{pic.1072.jpg} and \texttt{pic.0948.jpg}.
         \includegraphics[width=\textwidth]{report_imgs/pic.0617.jpg}
         \caption{Histogram \#2\\pic.0617\\$-0.651$}
     \end{subfigure}
-    \caption{Task 6b: \texttt{pic.0948.jpg} -- DNN top hits (0930, 0960) are
+    \caption{Task 6b: \texttt{pic.0948.jpg} (DNN top hits 0930 and 0960) are
     sequential shots of the same scene, which makes sense. The histogram method
-    returned pic.0630 and pic.0617 as its top hits -- images with a similar
+    returned pic.0630 and pic.0617 as its top hits: images with a similar
     dominant color but from unrelated scenes. Again the DNN is more semantically
     meaningful.}
 \end{figure}
@@ -490,7 +490,7 @@ similar colors. Combining both reduces both classes of error.
 \section*{Extensions}
 % ============================================================
 
-\subsection*{Extension 1: Additional Matching Method -- Center-Weighted Spatial Histogram}
+\subsection*{Extension 1: Center-Weighted Spatial Histogram Extension}
 
 The assignment suggests creating additional features and matching methods and comparing
 them. Beyond the equal-weight 3x3 grid used in Task 3, we implemented a second scoring
@@ -531,7 +531,7 @@ python3 show_matches.py olympus/pic.0164.jpg olympus dnn 5
 python3 show_matches.py olympus/pic.0274.jpg olympus custom 5
 \end{verbatim}
 
-The script is purely a frontend -- all feature computation and matching is still
+The script is purely a frontend; all feature computation and matching is still
 done in C++. It works for all seven methods (\texttt{baseline}, \texttt{histogram},
 \texttt{multihistogram}, \texttt{multihistogram-weighted}, \texttt{texture},
 \texttt{dnn}, \texttt{custom}).
@@ -549,7 +549,7 @@ Below are example outputs generated by the viewer for four different methods:
     \centering
     \includegraphics[width=0.95\textwidth]{report_imgs/viewer_dnn_0164.png}
     \caption{Python viewer output: \texttt{dnn} method on \texttt{pic.0164.jpg}.
-    Cosine distance scores are in the range $[0,1]$ -- lower means more similar.}
+    Cosine distance scores are in the range $[0,1]$: lower means more similar.}
 \end{figure}
 
 \begin{figure}[H]
@@ -576,7 +576,7 @@ the system significantly more user-friendly than a command line. The GUI has:
     \item A file browser to select any target image from disk
     \item A directory picker for the image database (defaults to \texttt{olympus/})
     \item A dropdown for all seven methods (\texttt{baseline} through \texttt{custom})
-    \item A spinbox for $N$ (1--20 results)
+    \item A spinbox for $N$ (1 to 20 results)
     \item A \textbf{Find Matches} button that runs the C++ binary in a background
           thread so the UI stays responsive during matching
     \item A scrollable horizontal results panel showing the target (blue border)
