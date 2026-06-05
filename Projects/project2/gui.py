@@ -23,8 +23,7 @@ import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QComboBox, QSpinBox, QFileDialog,
-    QScrollArea, QGridLayout, QFrame, QSizePolicy, QLineEdit,
-    QStatusBar, QGroupBox
+    QScrollArea, QFrame, QLineEdit, QGroupBox
 )
 from PyQt5.QtGui import QPixmap, QFont, QColor, QPalette
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
@@ -140,7 +139,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("CS5330 CBIR — Content-Based Image Retrieval")
+        self.setWindowTitle("CS5330 CBIR - Content-Based Image Retrieval")
         self.setMinimumSize(1100, 680)
         self._apply_dark_theme()
 
@@ -149,7 +148,7 @@ class MainWindow(QMainWindow):
                                    "build", "match")
 
         self._build_ui()
-        self.statusBar().showMessage("Ready — select a target image and click Find Matches.")
+        self.statusBar().showMessage("Ready: select a target image and click Find Matches.")
 
     # ── dark theme ────────────────────────────────────────────────────────
     def _apply_dark_theme(self):

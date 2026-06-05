@@ -63,9 +63,26 @@ int main(int argc, char* argv[]) {
     std::string targetPath = argv[1];
     std::string dbDir      = argv[2];
     std::string method     = argv[3];
-    int N                  = (argc >= 5) ? std::stoi(argv[4]) : 5;
-    // default CSV sits one level above the olympus/ folder
-    std::string csvPath    = (argc >= 6 && std::string(argv[5]) != "bottom") ? argv[5] : dbDir + "/../ResNet18_olym.csv";
+    
+    int N = 5;
+    std::string csvPath = dbDir + "/../ResNet18_olym.csv";
+    if (argc >= 5) {
+        std::string arg4 = argv[4];
+        if (arg4 != "bottom") {
+            try {
+                N = std::stoi(arg4);
+                if (argc >= 6 && std::string(argv[5]) != "bottom") {
+                    csvPath = argv[5];
+                }
+            } catch (...) {
+                // If N is not a valid integer, it might be the csvPath
+                if (arg4.size() >= 4 && arg4.substr(arg4.size() - 4) == ".csv") {
+                    csvPath = arg4;
+                }
+            }
+        }
+    }
+
     // pass 'bottom' as any trailing arg to show N least similar instead of most similar
     bool showBottom = false;
     for (int i = 4; i < argc; i++)
@@ -74,10 +91,11 @@ int main(int argc, char* argv[]) {
     std::string targetName = fs::path(targetPath).filename().string();
 
     // =========================================================
-    // DNN and Custom methods — features come from CSV, not image
+    // Feature and Distance Metric Selection
     // =========================================================
+    std::map<std::string, std::vector<float>> dnnFeatures;
     if (method == "dnn" || method == "custom") {
-        auto dnnFeatures = loadDNNFeatures(csvPath);
+        dnnFeatures = loadDNNFeatures(csvPath);
         if (dnnFeatures.empty()) {
             std::cerr << "No DNN features loaded from: " << csvPath << "\n";
             return 1;
@@ -86,70 +104,9 @@ int main(int argc, char* argv[]) {
             std::cerr << "Target image '" << targetName << "' not found in CSV.\n";
             return 1;
         }
-
-        const std::vector<float>& targetDNN = dnnFeatures[targetName];
-        std::vector<ImageMatch> matches;
-
-        if (method == "dnn") {
-            // Task 5: pure cosine distance on DNN embeddings
-            CosineDistanceScoring scorer;
-            for (const auto& [fname, feat] : dnnFeatures) {
-                if (fname == targetName) continue;
-                matches.push_back({ fname, scorer.score(targetDNN, feat) });
-            }
-
-        } else {
-            // Task 7 (custom): whole-image color histogram + DNN embedding, combined distance
-            // Feature vector layout: [colorHist (8^3=512) | dnnEmbedding (512)] = 1024 values
-            // Distance = 0.4 * (1 - colorIntersect) + 0.6 * cosine_dnn
-            HistogramFeaturizer colorizer(8); // 8 bins/channel -> 512 values
-            CustomScoring scorer(512, 512);
-
-            cv::Mat targetImg = cv::imread(targetPath);
-            if (targetImg.empty()) {
-                std::cerr << "Could not load target image: " << targetPath << "\n";
-                return 1;
-            }
-
-            // build target combined feature: [colorHist | dnn]
-            std::vector<float> targetColor = colorizer.featurize(targetImg);
-            std::vector<float> targetCombined = targetColor;
-            targetCombined.insert(targetCombined.end(), targetDNN.begin(), targetDNN.end());
-
-            for (const auto& [fname, dnnFeat] : dnnFeatures) {
-                if (fname == targetName) continue;
-
-                std::string imgPath = dbDir + "/" + fname;
-                cv::Mat img = cv::imread(imgPath);
-                if (img.empty()) continue;
-
-                std::vector<float> colorFeat = colorizer.featurize(img);
-                std::vector<float> combined  = colorFeat;
-                combined.insert(combined.end(), dnnFeat.begin(), dnnFeat.end());
-
-                matches.push_back({ fname, scorer.score(targetCombined, combined) });
-            }
-        }
-
-        std::sort(matches.begin(), matches.end(), [](const ImageMatch& a, const ImageMatch& b) {
-            return a.score < b.score;
-        });
-
-        if (showBottom) std::reverse(matches.begin(), matches.end());
-
-        std::cout << (showBottom ? "Bottom " : "Top ") << N << " matches for: " << targetName
-                  << " (method: " << method << ")\n";
-        for (int i = 0; i < N && i < (int)matches.size(); i++)
-            std::cout << i + 1 << ". " << matches[i].name
-                      << "  (score: " << matches[i].score << ")\n";
-
-        return 0;
     }
 
-    // =========================================================
-    // Classic methods — features computed from the image pixels
-    // =========================================================
-    cv::Mat targetImg = cv::imread(targetPath);
+    cv::Mat targetImg = cv::imread(targetPath, cv::IMREAD_COLOR);
     if (targetImg.empty()) {
         std::cerr << "Could not load target image: " << targetPath << "\n";
         return 1;
@@ -173,27 +130,38 @@ int main(int argc, char* argv[]) {
     } else if (method == "texture") {
         featurizer = new TextureColorFeaturizer();     // color (512) + sobel mag (16) = 528
         scorer     = new TextureColorScoring();        // equal-weight histogram intersection
+    } else if (method == "dnn") {
+        featurizer = new DnnFeaturizer(dnnFeatures);
+        scorer     = new CosineDistanceScoring();
+    } else if (method == "custom") {
+        featurizer = new CustomFeaturizer(dnnFeatures);
+        scorer     = new CustomScoring(512, 512);
     } else {
         std::cerr << "Unknown method: " << method << "\n";
         std::cerr << "Use: baseline, histogram, multihistogram, multihistogram-weighted, texture, dnn, custom\n";
         return 1;
     }
 
-    std::vector<float> targetFeatures = featurizer->featurize(targetImg);
+    std::vector<float> targetFeatures = featurizer->featurize(targetImg, targetName);
     std::vector<ImageMatch> matches;
 
+    // Unified matching loop — featurizer encapsulates all details.
+    // DnnFeaturizer ignores the cv::Mat and looks up by filename.
+    // ClassicFeaturizers ignore the filename and compute from pixels.
     for (const auto& entry : fs::directory_iterator(dbDir)) {
         if (!entry.is_regular_file()) continue;
         std::string fname = entry.path().filename().string();
         if (fname == targetName) continue;
 
-        cv::Mat img = cv::imread(entry.path().string());
+        cv::Mat img = cv::imread(entry.path().string(), cv::IMREAD_COLOR);
         if (img.empty()) continue;
 
-        std::vector<float> feat = featurizer->featurize(img);
+        std::vector<float> feat = featurizer->featurize(img, fname);
         matches.push_back({ fname, scorer->score(targetFeatures, feat) });
     }
 
+
+    // Sort and output top N
     std::sort(matches.begin(), matches.end(), [](const ImageMatch& a, const ImageMatch& b) {
         return a.score < b.score;
     });
