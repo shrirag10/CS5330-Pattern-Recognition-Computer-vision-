@@ -5,7 +5,8 @@ class SSDScoring : public SimilarityScoring {
 public:
     float score(const std::vector<float>& a, const std::vector<float>& b) override {
         float ssd = 0.0f;
-        for (int i = 0; i < (int)a.size(); i++) {
+        int n = std::min(a.size(), b.size()); // guard against mismatched lengths
+        for (int i = 0; i < n; i++) {
             float diff = a[i] - b[i];
             ssd += diff * diff;
         }
