@@ -78,3 +78,34 @@ public:
 private:
     int regionSize;
 };
+
+// Task 4: Texture + Color scoring
+// Splits the feature vector into color (first colorHistSize values) and texture (remaining textureBins values).
+// Computes normalized histogram intersection on each half independently, then averages with equal weight.
+// Negated so that lower score = more similar (consistent with all other scorers).
+class TextureColorScoring : public SimilarityScoring {
+public:
+    // colorHistSize = colorBins^3 (default 8^3=512), textureBins = 16
+    TextureColorScoring(int colorHistSize = 512, int textureBins = 16)
+        : colorHistSize(colorHistSize), textureBins(textureBins) {}
+
+    float score(const std::vector<float>& a, const std::vector<float>& b) override {
+        // color sub-histogram intersection
+        float colorIntersect = 0.0f;
+        for (int i = 0; i < colorHistSize; i++)
+            colorIntersect += std::min(a[i], b[i]);
+
+        // texture sub-histogram intersection
+        float textureIntersect = 0.0f;
+        for (int i = 0; i < textureBins; i++)
+            textureIntersect += std::min(a[colorHistSize + i], b[colorHistSize + i]);
+
+        // equal weighting: 0.5 color + 0.5 texture
+        float combined = 0.5f * colorIntersect + 0.5f * textureIntersect;
+        return -combined; // negate so lower = more similar
+    }
+
+private:
+    int colorHistSize;
+    int textureBins;
+};
