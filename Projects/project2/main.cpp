@@ -17,7 +17,7 @@ struct ImageMatch {
 int main(int argc, char* argv[]) {
     if (argc < 4) {
         std::cerr << "Usage: ./match <target_image> <database_dir> <method>\n";
-        std::cerr << "Methods: baseline, histogram\n";
+        std::cerr << "Methods: baseline, histogram, multihistogram, multihistogram-weighted, texture\n";
         return 1;
     }
 
@@ -47,8 +47,11 @@ int main(int argc, char* argv[]) {
     } else if (method == "multihistogram-weighted") {
         featurizer = new MultiHistogramFeaturizer();
         scorer = new MultiHistogramCenterWeightedScoring();
+    } else if (method == "texture") {
+        featurizer = new TextureColorFeaturizer();   // color (512) + sobel mag (16) = 528 values
+        scorer = new TextureColorScoring();          // equal-weight histogram intersection
     } else {
-        std::cerr << "Unknown method: " << method << ". Use 'baseline', 'histogram', 'multihistogram', or 'multihistogram-weighted'.\n";
+        std::cerr << "Unknown method: " << method << ". Use 'baseline', 'histogram', 'multihistogram', 'multihistogram-weighted', or 'texture'.\n";
         return 1;
     }
 
