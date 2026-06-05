@@ -490,9 +490,10 @@ similar colors. Combining both reduces both classes of error.
 \section*{Extensions}
 % ============================================================
 
-\subsection*{Extension 1: Center-Weighted Spatial Histogram Scoring}
+\subsection*{Extension 1: Additional Matching Method -- Center-Weighted Spatial Histogram}
 
-Beyond the equal-weight 3x3 grid used in Task 3, we implemented a second scoring
+The assignment suggests creating additional features and matching methods and comparing
+them. Beyond the equal-weight 3x3 grid used in Task 3, we implemented a second scoring
 variant called \texttt{MultiHistogramCenterWeightedScoring} where the center
 region receives 50\% of the total weight, the four edge regions share 30\% (7.5\%
 each), and the four corners share 20\% (5\% each). The motivation is that the
@@ -504,16 +505,21 @@ Run it with:
 ./match <target> olympus/ multihistogram-weighted [N]
 \end{verbatim}
 
-For landscape images like \texttt{pic.0274.jpg} where content is spread across
-the entire frame, the equal-weight variant performed better. For portrait-style
-or product images, the center-weighted variant may be more effective.
+Comparing the two variants: for landscape images like \texttt{pic.0274.jpg} where
+content is spread across the entire frame, the equal-weight variant performed better
+(top match pic.0273, score $-0.571$). For portrait-style or product images with a
+clear centered subject, the center-weighted variant is more effective because it
+ignores distracting background colors in the corners.
 
-\subsection*{Extension 2: Python Visual Result Viewer}
+\subsection*{Extension 2: Python Visual Query Interface}
 
-We wrote \texttt{show\_matches.py}, a Python script that calls the compiled C++
-\texttt{match} binary, parses the ranked filenames from stdout, and displays the
-target image alongside the top $N$ matches in a single \texttt{matplotlib} figure.
-This removes the need to manually look up each filename after a query.
+The assignment notes that a Python script which calls the C++ executable, parses
+the output, and displays the top matches is a good way to make the system more
+sophisticated than a plain command-line program. We implemented this as
+\texttt{show\_matches.py}, which calls the compiled \texttt{match} binary,
+parses the ranked filenames from stdout, and renders the target image alongside
+the top $N$ matches in a single \texttt{matplotlib} figure with filename and
+score labels. This removes the need to manually look up each filename after a query.
 
 Usage:
 \begin{verbatim}
