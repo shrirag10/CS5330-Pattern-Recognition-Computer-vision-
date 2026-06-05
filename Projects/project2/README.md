@@ -38,9 +38,9 @@ Download the image database and place all images in the `olympus/` folder. This 
 | File | Role |
 |------|------|
 | `Featurizer.h` | Abstract base class with `featurize()` and `featurizeAll()` |
-| `FeaturizerImpl.h` | `BaselineFeaturizer` — extracts 7x7 center patch as a 147-value BGR vector |
+| `FeaturizerImpl.h` | `BaselineFeaturizer`: extracts 7x7 center patch as a 147-value BGR vector |
 | `SimilarityScoring.h` | Abstract base class with `score()` |
-| `SimilarityScoringImpl.h` | `SSDScoring` — computes Sum of Squared Differences between two feature vectors |
+| `SimilarityScoringImpl.h` | `SSDScoring`: computes Sum of Squared Differences between two feature vectors |
 | `main.cpp` | Loads target image, scans database dir, scores all images, sorts and prints top 5 |
 
 ### Feature extraction (`BaselineFeaturizer`)
@@ -198,7 +198,7 @@ center  (CTR)            → 0.50
 
 ### Discussion: equal vs center-weighted
 
-For landscape images where content is spread across the whole frame (e.g. `pic.0274.jpg`), **equal weighting produces better results** — the center-heavy approach over-focuses on one region and misses the global spatial color layout, leading to false matches.
+For landscape images where content is spread across the whole frame (e.g. `pic.0274.jpg`), **equal weighting produces better results** since the center-heavy approach over-focuses on one region and misses the global spatial color layout, leading to false matches.
 
 ### Run
 
@@ -225,4 +225,97 @@ Top 5 matches for: pic.0274.jpg (method: multihistogram)
 3. pic.0409.jpg  (score: -0.517759)
 4. pic.0275.jpg  (score: -0.49662)
 5. pic.0991.jpg  (score: -0.485229)
+```
+
+---
+
+## Task 4: Texture and Color Matching
+
+### How it works
+
+1. Load the target image and compute its feature vector using `TextureColorFeaturizer`.
+2. The feature vector is the concatenation of a 3D color histogram (8 bins/channel = 512 values) and a Sobel gradient magnitude histogram (16 bins = 16 values).
+3. Compute the distance between two feature vectors using `TextureColorScoring`.
+4. Sort by score (ascending) and print the top 5.
+
+### Feature extraction (`TextureColorFeaturizer`)
+
+The featurizer computes:
+- **Color part**: A whole-image 3D BGR histogram with 8 bins per channel. This is normalized by total pixel count.
+- **Texture part**: A 1D histogram of Sobel gradient magnitudes with 16 bins.
+  - The image is converted to grayscale manually (Y = 0.114*B + 0.587*G + 0.299*R).
+  - Standard Sobel 3x3 kernels are applied manually.
+  - The gradient magnitude is binned into 16 bins across the range [0, 1140] and normalized by the number of evaluated pixels.
+
+### Distance metric (`TextureColorScoring`)
+
+Computes normalized histogram intersection on each sub-histogram independently, and averages them with equal weight:
+```
+score = -(0.5 * color_intersection + 0.5 * texture_intersection)
+```
+Lower score means more similar.
+
+### Run
+
+```bash
+./match <target_image> <database_dir> texture
+```
+
+---
+
+## Task 5: Deep Network Embeddings
+
+### How it works
+
+1. Pre-computed 512-dimensional embeddings from the final global average pooling layer of a ResNet18 network are loaded from `ResNet18_olym.csv`.
+2. The target image and all database image embeddings are retrieved directly from the CSV.
+3. Compute the cosine distance between the target embedding and each database embedding using `CosineDistanceScoring`.
+4. Sort by score (ascending) and print the top 5.
+
+### Distance metric (`CosineDistanceScoring`)
+
+Cosine distance is computed as:
+```
+distance = 1.0 - cos(theta) = 1.0 - (v1 . v2) / (|v1| * |v2|)
+```
+A distance of 0 means the vectors point in the same direction. Since features are ReLU outputs, values are non-negative, and distance is in [0, 1].
+
+### Run
+
+```bash
+./match <target_image> <database_dir> dnn [N] [csv_path]
+```
+
+---
+
+## Task 6: DNN Embeddings vs. Classic Features
+
+A qualitative comparison shows that:
+- **Classic features** (such as color histograms) represent low-level pixel statistics. They match based on overall color tone and can easily be fooled by unrelated scenes with coincidental colors.
+- **DNN embeddings** capture high-level semantic meaning (objects, scenes, layout). They successfully group sequentially numbered shots from a camera roll even under changing colors or lighting.
+
+---
+
+## Task 7: Custom Design (Color + DNN Combined)
+
+### How it works
+
+Our custom method targets general scene retrieval by combining a whole-image 3D BGR color histogram (512 values) with the 512-dimensional ResNet18 embedding from the CSV (1024 values total).
+
+### Distance metric (`CustomScoring`)
+
+Computes a weighted distance:
+```
+distance = 0.4 * (1.0 - color_intersection) + 0.6 * cosine_dnn
+```
+This balances color appearance (40%) and semantic similarity (60%), yielding results that are both visually and conceptually similar to the query.
+
+### Run
+
+```bash
+# Get top 5 matches
+./match <target_image> <database_dir> custom 5
+
+# Get bottom 5 (least similar) matches
+./match <target_image> <database_dir> custom 5 bottom
 ```
