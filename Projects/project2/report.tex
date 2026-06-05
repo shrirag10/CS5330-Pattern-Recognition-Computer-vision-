@@ -67,6 +67,10 @@ Sum of Squared Differences (SSD) as the distance metric. A score of 0 means
 the patches are identical. This is a simple but surprisingly effective baseline
 for images where the central subject is similar.
 
+\begin{verbatim}
+./build/match ./olympus/pic.1016.jpg ./olympus baseline 3
+\end{verbatim}
+
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{0.18\textwidth}
@@ -102,6 +106,10 @@ We compute a 3D BGR histogram over the whole image with 16 bins per channel
 (4096 total bins), normalize it by pixel count, and use histogram intersection
 as the distance metric. Intersection is negated so that lower scores mean more
 similar images. A score of $-1$ means the histograms are identical.
+
+\begin{verbatim}
+./build/match ./olympus/pic.0164.jpg ./olympus histogram 3
+\end{verbatim}
 
 \begin{figure}[H]
     \centering
@@ -139,6 +147,11 @@ region we compute a normalized 3D BGR histogram with 8 bins per channel (512
 values per region, 4608 total). We compare corresponding regions using histogram
 intersection and average the 9 region scores with equal weights. This spatial
 layout captures where colors appear in the image, not just what colors appear.
+
+\begin{verbatim}
+./build/match ./olympus/pic.0274.jpg ./olympus multihistogram 3
+./build/match ./olympus/pic.0274.jpg ./olympus multihistogram-weighted 3
+\end{verbatim}
 
 \begin{figure}[H]
     \centering
@@ -179,6 +192,10 @@ The Sobel kernels are applied manually from scratch on a manual grayscale
 conversion; no \texttt{cv::Sobel} or \texttt{cv::calcHist} was used. Each pixel's
 gradient magnitude $M = \sqrt{G_x^2 + G_y^2}$ is binned into 16 equally spaced
 bins across the range $[0, 510 \cdot \sqrt{5}]$.
+
+\begin{verbatim}
+./build/match ./olympus/pic.0535.jpg ./olympus texture 3
+\end{verbatim}
 
 The distance metric computes histogram intersection on each sub-histogram
 independently and averages them with equal weight:
@@ -232,6 +249,11 @@ We use pre-computed 512-dimensional embeddings from the final global average
 pooling layer of a ResNet18 network pre-trained on ImageNet. The feature vectors
 are loaded from \texttt{ResNet18\_olym.csv}. Unlike all other tasks, the target
 image feature is also looked up from this file rather than computed dynamically.
+
+\begin{verbatim}
+./build/match ./olympus/pic.0893.jpg ./olympus dnn 3 --embeds ./data/ResNet18_olym.csv
+./build/match ./olympus/pic.0164.jpg ./olympus dnn 3 --embeds ./data/ResNet18_olym.csv
+\end{verbatim}
 
 We use cosine distance as the metric:
 \[
@@ -300,6 +322,14 @@ stay in $[0, 1]$.
 
 We compare ResNet18 cosine distance against 3D histogram intersection on two target
 images, \texttt{pic.1072.jpg} and \texttt{pic.0948.jpg}.
+
+\begin{verbatim}
+./build/match ./olympus/pic.1072.jpg ./olympus histogram 3
+./build/match ./olympus/pic.1072.jpg ./olympus dnn 3 --embeds ./data/ResNet18_olym.csv
+
+./build/match ./olympus/pic.0948.jpg ./olympus histogram 3
+./build/match ./olympus/pic.0948.jpg ./olympus dnn 3 --embeds ./data/ResNet18_olym.csv
+\end{verbatim}
 
 \begin{figure}[H]
     \centering
@@ -481,6 +511,14 @@ close but the actual image appearance differs.
     \caption{Task 7: Custom method results for \texttt{pic.0893.jpg} showing the target, top 5 matches, and two least similar (bottom) matches. The top matches combine both similar red-brick buildings/streets (color) and general outdoor street/town scenes (DNN). The bottom matches are completely dissimilar outdoor forest or beach scenes.}
 \end{figure}
 
+\begin{verbatim}
+./build/match ./olympus/pic.0274.jpg ./olympus custom 5 --embeds ./data/ResNet18_olym.csv
+./build/match ./olympus/pic.0274.jpg ./olympus custom 5 --embeds ./data/ResNet18_olym.csv bottom
+
+./build/match ./olympus/pic.0893.jpg ./olympus custom 5 --embeds ./data/ResNet18_olym.csv
+./build/match ./olympus/pic.0893.jpg ./olympus custom 5 --embeds ./data/ResNet18_olym.csv bottom
+\end{verbatim}
+
 The custom method is most useful when you want images that look similar AND are
 semantically similar. Pure DNN can match images that look nothing alike but share
 a scene type; pure color matching can surface wrong images with coincidentally
@@ -641,7 +679,11 @@ python3 gui.py
         patch featurizer and SSD scoring (Task 1), the 3D color histogram
         featurizer and histogram intersection scoring (Task 2), and the 3x3
         spatial multi-histogram featurizer with equal and center-weighted
-        scoring (Task 3).
+        scoring (Task 3). Shyam also led the overall project setup and code
+        organization, designing the pipeline architecture with clean
+        abstractions (\texttt{Featurizer}, \texttt{SimilarityScoring},
+        \texttt{NamedImage}) and separating concerns into reusable,
+        independently testable components.
     \item Shriman Raghav Srinivasan implemented Tasks 4 through 7: the texture
         and color featurizer using manual Sobel gradient magnitude histograms
         (Task 4), the ResNet18 CSV reader and cosine distance scoring (Task 5),
