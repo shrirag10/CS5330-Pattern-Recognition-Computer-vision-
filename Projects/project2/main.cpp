@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <map>
 #include <opencv2/opencv.hpp>
@@ -112,30 +113,30 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    Featurizer*       featurizer = nullptr;
-    SimilarityScoring* scorer    = nullptr;
+    std::unique_ptr<Featurizer>       featurizer;
+    std::unique_ptr<SimilarityScoring> scorer;
 
     if (method == "baseline") {
-        featurizer = new BaselineFeaturizer();
-        scorer     = new SSDScoring();
+        featurizer = std::make_unique<BaselineFeaturizer>();
+        scorer     = std::make_unique<SSDScoring>();
     } else if (method == "histogram") {
-        featurizer = new HistogramFeaturizer();        // 3D BGR, 16 bins/ch → 4096 values
-        scorer     = new HistogramIntersectionScoring();
+        featurizer = std::make_unique<HistogramFeaturizer>();        // 3D BGR, 16 bins/ch → 4096 values
+        scorer     = std::make_unique<HistogramIntersectionScoring>();
     } else if (method == "multihistogram") {
-        featurizer = new MultiHistogramFeaturizer();   // 3x3 grid, 8 bins/ch → 4608 values
-        scorer     = new MultiHistogramScoring();      // equal weight per region
+        featurizer = std::make_unique<MultiHistogramFeaturizer>();   // 3x3 grid, 8 bins/ch → 4608 values
+        scorer     = std::make_unique<MultiHistogramScoring>();      // equal weight per region
     } else if (method == "multihistogram-weighted") {
-        featurizer = new MultiHistogramFeaturizer();
-        scorer     = new MultiHistogramCenterWeightedScoring(); // center=50%
+        featurizer = std::make_unique<MultiHistogramFeaturizer>();
+        scorer     = std::make_unique<MultiHistogramCenterWeightedScoring>(); // center=50%
     } else if (method == "texture") {
-        featurizer = new TextureColorFeaturizer();     // color (512) + sobel mag (16) = 528
-        scorer     = new TextureColorScoring();        // equal-weight histogram intersection
+        featurizer = std::make_unique<TextureColorFeaturizer>();     // color (512) + sobel mag (16) = 528
+        scorer     = std::make_unique<TextureColorScoring>();        // equal-weight histogram intersection
     } else if (method == "dnn") {
-        featurizer = new DnnFeaturizer(dnnFeatures);
-        scorer     = new CosineDistanceScoring();
+        featurizer = std::make_unique<DnnFeaturizer>(dnnFeatures);
+        scorer     = std::make_unique<CosineDistanceScoring>();
     } else if (method == "custom") {
-        featurizer = new CustomFeaturizer(dnnFeatures);
-        scorer     = new CustomScoring(512, 512);
+        featurizer = std::make_unique<CustomFeaturizer>(dnnFeatures);
+        scorer     = std::make_unique<CustomScoring>(512, 512);
     } else {
         std::cerr << "Unknown method: " << method << "\n";
         std::cerr << "Use: baseline, histogram, multihistogram, multihistogram-weighted, texture, dnn, custom\n";
@@ -174,7 +175,5 @@ int main(int argc, char* argv[]) {
         std::cout << i + 1 << ". " << matches[i].name
                   << "  (score: " << matches[i].score << ")\n";
 
-    delete featurizer;
-    delete scorer;
     return 0;
 }

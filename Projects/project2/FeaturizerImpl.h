@@ -1,6 +1,7 @@
 #pragma once
 #include "Featurizer.h"
 #include <cmath>
+#include <iostream>
 #include <map>
 #include <string>
 
@@ -50,22 +51,9 @@ public:
         return hist; // bins^3 values (default: 512)
     }
 
+    // exposed so MultiHistogramFeaturizer can reuse it directly
     std::vector<float> computeRegionHistogram(const cv::Mat& region) {
-        float binWidth = 256.0f / bins;
-        int total = region.rows * region.cols;
-        std::vector<float> hist(bins * bins * bins, 0.0f);
-
-        for (int r = 0; r < region.rows; r++) {
-            for (int c = 0; c < region.cols; c++) {
-                cv::Vec3b pixel = region.at<cv::Vec3b>(r, c);
-                int bBin = std::min((int)(pixel[0] / binWidth), bins - 1);
-                int gBin = std::min((int)(pixel[1] / binWidth), bins - 1);
-                int rBin = std::min((int)(pixel[2] / binWidth), bins - 1);
-                hist[bBin * bins * bins + gBin * bins + rBin]++;
-            }
-        }
-        for (float& v : hist) v /= total;
-        return hist;
+        return featurize(region);
     }
 
 private:
@@ -74,7 +62,8 @@ private:
 
 class MultiHistogramFeaturizer : public Featurizer {
 public:
-    MultiHistogramFeaturizer(int bins = 8) : bins(bins) {}
+    // uses HistogramFeaturizer for region histograms — no code duplication
+    MultiHistogramFeaturizer(int bins = 8) : regionHistogram(bins) {}
 
     std::vector<float> featurize(const cv::Mat& image) override {
         int W = image.cols;
@@ -93,7 +82,7 @@ public:
                 int h = (row == 2) ? H - y : rh;
 
                 cv::Mat region = image(cv::Rect(x, y, w, h));
-                std::vector<float> hist = computeRegionHistogram(region);
+                std::vector<float> hist = regionHistogram.computeRegionHistogram(region);
                 features.insert(features.end(), hist.begin(), hist.end());
             }
         }
@@ -102,25 +91,7 @@ public:
     }
 
 private:
-    std::vector<float> computeRegionHistogram(const cv::Mat& region) {
-        float binWidth = 256.0f / bins;
-        int total = region.rows * region.cols;
-        std::vector<float> hist(bins * bins * bins, 0.0f);
-
-        for (int r = 0; r < region.rows; r++) {
-            for (int c = 0; c < region.cols; c++) {
-                cv::Vec3b pixel = region.at<cv::Vec3b>(r, c);
-                int bBin = std::min((int)(pixel[0] / binWidth), bins - 1);
-                int gBin = std::min((int)(pixel[1] / binWidth), bins - 1);
-                int rBin = std::min((int)(pixel[2] / binWidth), bins - 1);
-                hist[bBin * bins * bins + gBin * bins + rBin]++;
-            }
-        }
-        for (float& v : hist) v /= total;
-        return hist;
-    }
-
-    int bins;
+    HistogramFeaturizer regionHistogram;
 };
 
 // Task 4: Texture + Color featurizer
@@ -219,8 +190,10 @@ public:
     DnnFeaturizer(const std::map<std::string, std::vector<float>>& dnnFeatures)
         : dnnFeatures(dnnFeatures) {}
 
+    // Should always be called with a filename — warn if not
     std::vector<float> featurize(const cv::Mat& /*image*/) override {
-        return std::vector<float>(512, 0.0f); // Fallback if filename not provided
+        std::cerr << "DnnFeaturizer: featurize() called without filename — returning zero vector\n";
+        return std::vector<float>(512, 0.0f);
     }
 
     std::vector<float> featurize(const cv::Mat& /*image*/, const std::string& filename) override {
@@ -228,6 +201,8 @@ public:
         if (it != dnnFeatures.end()) {
             return it->second;
         }
+        // filename not in CSV — return zeros (image will score poorly, not crash)
+        std::cerr << "DnnFeaturizer: '" << filename << "' not found in CSV — returning zero vector\n";
         return std::vector<float>(512, 0.0f);
     }
 
