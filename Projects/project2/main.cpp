@@ -65,7 +65,11 @@ int main(int argc, char* argv[]) {
     std::string method     = argv[3];
     int N                  = (argc >= 5) ? std::stoi(argv[4]) : 5;
     // default CSV sits one level above the olympus/ folder
-    std::string csvPath    = (argc >= 6) ? argv[5] : dbDir + "/../ResNet18_olym.csv";
+    std::string csvPath    = (argc >= 6 && std::string(argv[5]) != "bottom") ? argv[5] : dbDir + "/../ResNet18_olym.csv";
+    // pass 'bottom' as any trailing arg to show N least similar instead of most similar
+    bool showBottom = false;
+    for (int i = 4; i < argc; i++)
+        if (std::string(argv[i]) == "bottom") { showBottom = true; break; }
 
     std::string targetName = fs::path(targetPath).filename().string();
 
@@ -131,7 +135,9 @@ int main(int argc, char* argv[]) {
             return a.score < b.score;
         });
 
-        std::cout << "Top " << N << " matches for: " << targetName
+        if (showBottom) std::reverse(matches.begin(), matches.end());
+
+        std::cout << (showBottom ? "Bottom " : "Top ") << N << " matches for: " << targetName
                   << " (method: " << method << ")\n";
         for (int i = 0; i < N && i < (int)matches.size(); i++)
             std::cout << i + 1 << ". " << matches[i].name
@@ -192,7 +198,9 @@ int main(int argc, char* argv[]) {
         return a.score < b.score;
     });
 
-    std::cout << "Top " << N << " matches for: " << targetName
+    if (showBottom) std::reverse(matches.begin(), matches.end());
+
+    std::cout << (showBottom ? "Bottom " : "Top ") << N << " matches for: " << targetName
               << " (method: " << method << ")\n";
     for (int i = 0; i < N && i < (int)matches.size(); i++)
         std::cout << i + 1 << ". " << matches[i].name
