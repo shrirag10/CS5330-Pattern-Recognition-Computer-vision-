@@ -8,6 +8,7 @@ build/
 Projects/project2/olympus/*.jpg
 Projects/project2/olympus/*.png
 Projects/project2/*.csv
+Projects/project2/ResNet18_olym.csv
 
 # LaTeX aux files
 *.aux

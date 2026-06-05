@@ -109,3 +109,61 @@ private:
     int colorHistSize;
     int textureBins;
 };
+
+// Task 5: Cosine distance for DNN embeddings
+// d(v1, v2) = 1 - cos(theta)
+// cos(theta) = (v1 . v2) / (|v1| * |v2|)
+// Range: [0, 2] in theory; [0, 1] for non-negative activations (ReLU outputs)
+// 0 = identical direction, 1 = orthogonal, 2 = opposite
+class CosineDistanceScoring : public SimilarityScoring {
+public:
+    float score(const std::vector<float>& a, const std::vector<float>& b) override {
+        float dot = 0.0f, normA = 0.0f, normB = 0.0f;
+        for (int i = 0; i < (int)a.size(); i++) {
+            dot   += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+        if (normA == 0.0f || normB == 0.0f) return 1.0f; // undefined → max distance
+        float cosTheta = dot / (std::sqrt(normA) * std::sqrt(normB));
+        return 1.0f - cosTheta; // lower = more similar
+    }
+};
+
+// Task 7: Custom scoring for combined [colorHist | dnnEmbedding] feature vector
+// Feature layout: first colorHistSize values = 3D color histogram (normalized)
+//                 next dnnSize values = ResNet18 embedding
+// Distance = 0.4 * (1 - colorIntersect) + 0.6 * cosine_dnn
+// Both components in [0,1], lower = more similar
+class CustomScoring : public SimilarityScoring {
+public:
+    CustomScoring(int colorHistSize = 512, int dnnSize = 512)
+        : colorHistSize(colorHistSize), dnnSize(dnnSize) {}
+
+    float score(const std::vector<float>& a, const std::vector<float>& b) override {
+        // --- color part: histogram intersection ---
+        float colorIntersect = 0.0f;
+        for (int i = 0; i < colorHistSize; i++)
+            colorIntersect += std::min(a[i], b[i]);
+        float colorDist = 1.0f - colorIntersect; // [0, 1], lower = more similar
+
+        // --- DNN part: cosine distance ---
+        float dot = 0.0f, normA = 0.0f, normB = 0.0f;
+        for (int i = 0; i < dnnSize; i++) {
+            int idx = colorHistSize + i;
+            dot   += a[idx] * b[idx];
+            normA += a[idx] * a[idx];
+            normB += b[idx] * b[idx];
+        }
+        float cosineDist = 1.0f;
+        if (normA > 0.0f && normB > 0.0f)
+            cosineDist = 1.0f - dot / (std::sqrt(normA) * std::sqrt(normB));
+
+        // equal-ish weighting: 40% color appearance, 60% DNN semantics
+        return 0.4f * colorDist + 0.6f * cosineDist;
+    }
+
+private:
+    int colorHistSize;
+    int dnnSize;
+};
