@@ -127,12 +127,13 @@ class CosineDistanceScoring : public SimilarityScoring {
 public:
     float score(const std::vector<float>& a, const std::vector<float>& b) override {
         float dot = 0.0f, normA = 0.0f, normB = 0.0f;
-        for (int i = 0; i < (int)a.size(); i++) {
+        int n = std::min(a.size(), b.size()); // guard: only iterate shared length
+        for (int i = 0; i < n; i++) {
             dot   += a[i] * b[i];
             normA += a[i] * a[i];
             normB += b[i] * b[i];
         }
-        if (normA == 0.0f || normB == 0.0f) return 1.0f; // undefined → max distance
+        if (normA == 0.0f || normB == 0.0f) return 1.0f; // undefined -> max distance
         float cosTheta = dot / (std::sqrt(normA) * std::sqrt(normB));
         return 1.0f - cosTheta; // lower = more similar
     }
@@ -149,9 +150,12 @@ public:
         : colorHistSize(colorHistSize), dnnSize(dnnSize) {}
 
     float score(const std::vector<float>& a, const std::vector<float>& b) override {
+        int aSize = (int)a.size();
+        int bSize = (int)b.size();
+
         // --- color part: histogram intersection ---
         float colorIntersect = 0.0f;
-        for (int i = 0; i < colorHistSize; i++)
+        for (int i = 0; i < colorHistSize && i < aSize && i < bSize; i++)
             colorIntersect += std::min(a[i], b[i]);
         float colorDist = 1.0f - colorIntersect; // [0, 1], lower = more similar
 
@@ -159,6 +163,7 @@ public:
         float dot = 0.0f, normA = 0.0f, normB = 0.0f;
         for (int i = 0; i < dnnSize; i++) {
             int idx = colorHistSize + i;
+            if (idx >= aSize || idx >= bSize) break; // guard: vector too short
             dot   += a[idx] * b[idx];
             normA += a[idx] * a[idx];
             normB += b[idx] * b[idx];
