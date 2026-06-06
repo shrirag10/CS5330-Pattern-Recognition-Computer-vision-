@@ -9,8 +9,10 @@
 
 // Shared helper: computes normalized 3D BGR histogram for a region
 inline std::vector<float> compute3DHistogram(const cv::Mat& image, int bins) {
-    float binWidth = 256.0f / bins;
     int total = image.rows * image.cols;
+    if (total == 0) return std::vector<float>(bins * bins * bins, 0.0f); // guard: empty image
+
+    float binWidth = 256.0f / bins;
     std::vector<float> hist(bins * bins * bins, 0.0f);
 
     for (int r = 0; r < image.rows; r++) {
@@ -32,6 +34,13 @@ public:
         const cv::Mat& image = img.mat;
         int cx = image.cols / 2;
         int cy = image.rows / 2;
+
+        // guard: image must be at least 7x7 for the 3x3 pixel patch
+        if (image.cols < 7 || image.rows < 7) {
+            std::cerr << "BaselineFeaturizer: image '" << img.name << "' too small (" 
+                      << image.cols << "x" << image.rows << "), returning zeros\n";
+            return std::vector<float>(147, 0.0f);
+        }
 
         std::vector<float> features;
         for (int r = cy - 3; r <= cy + 3; r++) {
@@ -164,14 +173,22 @@ public:
             if (tokens.size() < 2) continue;
 
             std::string fname = tokens[0];
-            fname.erase(0, fname.find_first_not_of(" \t\r\n"));
-            fname.erase(fname.find_last_not_of(" \t\r\n") + 1);
+            // trim leading whitespace
+            auto start = fname.find_first_not_of(" \t\r\n");
+            if (start == std::string::npos) continue; // skip all-whitespace filenames
+            fname = fname.substr(start);
+            auto end = fname.find_last_not_of(" \t\r\n");
+            if (end != std::string::npos) fname = fname.substr(0, end + 1);
 
             std::vector<float> vec;
             vec.reserve(tokens.size() - 1);
-            for (int i = 1; i < (int)tokens.size(); i++)
-                vec.push_back(std::stof(tokens[i]));
-            embeddings[fname] = std::move(vec);
+            bool parse_ok = true;
+            for (int i = 1; i < (int)tokens.size(); i++) {
+                try { vec.push_back(std::stof(tokens[i])); }
+                catch (...) { parse_ok = false; break; } // skip malformed rows
+            }
+            if (parse_ok)
+                embeddings[fname] = std::move(vec);
         }
     }
 
@@ -201,6 +218,10 @@ public:
         std::vector<float> dnnPart   = dnn.featurize(img);
         colorPart.insert(colorPart.end(), dnnPart.begin(), dnnPart.end());
         return colorPart;
+    }
+
+    bool hasEmbedding(const std::string& name) const {
+        return dnn.has(name);
     }
 
 private:

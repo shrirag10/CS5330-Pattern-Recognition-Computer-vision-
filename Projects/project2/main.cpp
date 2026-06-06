@@ -71,10 +71,20 @@ int main(int argc, char* argv[]) {
         featurizer = std::make_unique<TextureColorFeaturizer>();
         scorer     = std::make_unique<TextureColorScoring>();
     } else if (method == "dnn") {
-        featurizer = std::make_unique<DnnFeaturizer>(csvPath);
+        auto dnn = std::make_unique<DnnFeaturizer>(csvPath);
+        if (!dnn->has(targetName)) {
+            std::cerr << "Error: target '" << targetName << "' not found in CSV: " << csvPath << "\n";
+            return 1;
+        }
+        featurizer = std::move(dnn);
         scorer     = std::make_unique<CosineDistanceScoring>();
     } else if (method == "custom") {
-        featurizer = std::make_unique<CustomFeaturizer>(csvPath);
+        auto custom = std::make_unique<CustomFeaturizer>(csvPath);
+        if (!custom->hasEmbedding(targetName)) {
+            std::cerr << "Error: target '" << targetName << "' not found in CSV: " << csvPath << "\n";
+            return 1;
+        }
+        featurizer = std::move(custom);
         scorer     = std::make_unique<CustomScoring>(512, 512);
     } else {
         std::cerr << "Unknown method: " << method << "\n";

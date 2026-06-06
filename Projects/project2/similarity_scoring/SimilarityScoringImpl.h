@@ -20,7 +20,8 @@ public:
     // histogram must be normalized before calling — intersection range is then [-1, 0]
     float score(const std::vector<float>& a, const std::vector<float>& b) override {
         float intersection = 0.0f;
-        for (int i = 0; i < (int)a.size(); i++)
+        int n = std::min(a.size(), b.size()); // guard: use shorter vector
+        for (int i = 0; i < n; i++)
             intersection += std::min(a[i], b[i]);
         return -intersection;
     }
@@ -32,11 +33,13 @@ public:
     MultiHistogramScoring(int bins = 8) : regionSize(bins * bins * bins) {}
 
     float score(const std::vector<float>& a, const std::vector<float>& b) override {
+        int maxIdx = (int)std::min(a.size(), b.size());
         float total = 0.0f;
         for (int region = 0; region < 9; region++) {
             int start = region * regionSize;
+            if (start >= maxIdx) break; // guard: fewer regions than expected
             float intersection = 0.0f;
-            for (int i = 0; i < regionSize; i++)
+            for (int i = 0; i < regionSize && (start + i) < maxIdx; i++)
                 intersection += std::min(a[start + i], b[start + i]);
             total += intersection;
         }
@@ -65,11 +68,13 @@ public:
             0.05f    // BR corner
         };
 
+        int maxIdx = (int)std::min(a.size(), b.size());
         float total = 0.0f;
         for (int region = 0; region < 9; region++) {
             int start = region * regionSize;
+            if (start >= maxIdx) break; // guard: fewer regions than expected
             float intersection = 0.0f;
-            for (int i = 0; i < regionSize; i++)
+            for (int i = 0; i < regionSize && (start + i) < maxIdx; i++)
                 intersection += std::min(a[start + i], b[start + i]);
             total += weights[region] * intersection;
         }
