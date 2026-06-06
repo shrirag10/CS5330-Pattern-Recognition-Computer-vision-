@@ -1,9 +1,32 @@
 # Project 2: Content-Based Image Retrieval
 
+## Folder Structure
+
+```
+project2/
+├── olympus/               # image database (download separately)
+├── data/
+│   └── ResNet18_olym.csv  # DNN embeddings (download separately)
+├── build/                 # created by cmake
+├── featurizer/
+├── similarity_scoring/
+├── models/
+├── main.cpp
+├── CMakeLists.txt
+└── run.sh
+```
+
 ## Build
 
 ```bash
 cmake -S . -B build && cmake --build build
+```
+
+## Run All Tasks
+
+```bash
+./run.sh all       # run all tasks
+./run.sh 1         # run a specific task (1-7)
 ```
 
 ---
