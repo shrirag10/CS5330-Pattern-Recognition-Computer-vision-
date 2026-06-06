@@ -1,6 +1,7 @@
 #pragma once
 #include "Featurizer.h"
-#include <cmath>
+#include <algorithm>  // std::min
+#include <cmath>      // std::sqrt
 #include <fstream>
 #include <sstream>
 #include <iostream>
