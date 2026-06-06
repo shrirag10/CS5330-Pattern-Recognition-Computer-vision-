@@ -3,16 +3,18 @@
 show_matches.py - visual result viewer for the CS5330 Project 2 match binary.
 
 Usage:
-    python3 show_matches.py <target_image> <database_dir> <method> [N]
+    python3 show_matches.py <target_image> <database_dir> <method> [N] [--embeds <csv>]
 
 Examples:
     python3 show_matches.py olympus/pic.1016.jpg olympus baseline 3
-    python3 show_matches.py olympus/pic.0164.jpg olympus dnn 5
-    python3 show_matches.py olympus/pic.0274.jpg olympus custom 5
+    python3 show_matches.py olympus/pic.0164.jpg olympus dnn 5 --embeds ResNet18_olym.csv
+    python3 show_matches.py olympus/pic.0274.jpg olympus custom 5 --embeds ResNet18_olym.csv
 
 The script calls the C++ ./match binary (must be compiled in ./build/),
 parses the ranked filenames from stdout, and displays the target image
 alongside the top N matches in a single matplotlib figure.
+
+Note: dnn and custom methods require --embeds pointing to ResNet18_olym.csv.
 """
 
 import sys
@@ -22,13 +24,21 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 
-def run_match(target, db_dir, method, n):
+def run_match(target, db_dir, method, n, embeds_csv=None):
     """Run the C++ match binary and return a list of (rank, filename, score)."""
     binary = os.path.join(os.path.dirname(__file__), "build", "match")
     if not os.path.isfile(binary):
         raise FileNotFoundError(f"match binary not found at {binary}. Run 'cmake .. && make' in build/.")
 
     cmd = [binary, target, db_dir, method, str(n)]
+
+    # dnn and custom require --embeds <csv>; default to one level above db_dir
+    if method in ("dnn", "custom"):
+        if embeds_csv is None:
+            embeds_csv = os.path.join(os.path.dirname(os.path.abspath(db_dir)),
+                                      "ResNet18_olym.csv")
+        cmd += ["--embeds", embeds_csv]
+
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         print(result.stderr)
@@ -103,13 +113,26 @@ def main():
     target  = sys.argv[1]
     db_dir  = sys.argv[2]
     method  = sys.argv[3]
-    n       = int(sys.argv[4]) if len(sys.argv) > 4 else 5
+    n       = 5
+    embeds  = None
+
+    i = 4
+    while i < len(sys.argv):
+        if sys.argv[i] == "--embeds" and i + 1 < len(sys.argv):
+            embeds = sys.argv[i + 1]
+            i += 2
+        else:
+            try:
+                n = int(sys.argv[i])
+            except ValueError:
+                pass
+            i += 1
 
     if not os.path.isfile(target):
         print(f"Error: target image not found: {target}")
         sys.exit(1)
 
-    matches = run_match(target, db_dir, method, n)
+    matches = run_match(target, db_dir, method, n, embeds)
     display(target, db_dir, matches, method, n)
 
 

@@ -34,16 +34,24 @@ class MatchWorker(QThread):
     finished = pyqtSignal(list)   # emits list of (rank, filename, score)
     error    = pyqtSignal(str)
 
-    def __init__(self, binary, target, db_dir, method, n):
+    def __init__(self, binary, target, db_dir, method, n, embeds_csv=None):
         super().__init__()
-        self.binary  = binary
-        self.target  = target
-        self.db_dir  = db_dir
-        self.method  = method
-        self.n       = n
+        self.binary     = binary
+        self.target     = target
+        self.db_dir     = db_dir
+        self.method     = method
+        self.n          = n
+        self.embeds_csv = embeds_csv
 
     def run(self):
         cmd = [self.binary, self.target, self.db_dir, self.method, str(self.n)]
+
+        # dnn and custom require --embeds <csv>
+        if self.method in ("dnn", "custom"):
+            csv = self.embeds_csv or os.path.join(
+                os.path.dirname(os.path.abspath(self.db_dir)), "ResNet18_olym.csv")
+            cmd += ["--embeds", csv]
+
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         except Exception as e:
@@ -319,7 +327,7 @@ class MainWindow(QMainWindow):
             return
 
         self.run_btn.setEnabled(False)
-        self.statusBar().showMessage(f"Running {method} on {os.path.basename(target)}…")
+        self.statusBar().showMessage(f"Running {method} on {os.path.basename(target)}...")
         self._clear_results()
 
         self._worker = MatchWorker(self.binary, target, db_dir, method, n)
