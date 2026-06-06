@@ -1,5 +1,7 @@
 #pragma once
 #include "SimilarityScoring.h"
+#include <algorithm>  // std::min
+#include <cmath>      // std::sqrt
 
 class SSDScoring : public SimilarityScoring {
 public:

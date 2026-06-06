@@ -94,7 +94,12 @@ int main(int argc, char* argv[]) {
     std::vector<float> targetFeatures = featurizer->featurize(target);
 
     std::vector<ImageMatch> matches;
+    if (!fs::is_directory(dbDir)) {
+        std::cerr << "Error: database directory not found: " << dbDir << "\n";
+        return 1;
+    }
     for (const auto& entry : fs::directory_iterator(dbDir)) {
+
         if (!entry.is_regular_file()) continue;
         std::string fname = entry.path().filename().string();
         if (fname == targetName) continue;
