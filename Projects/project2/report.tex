@@ -523,12 +523,12 @@ score labels. This removes the need to manually look up each filename after a qu
 
 Usage:
 \begin{verbatim}
-python3 show_matches.py <target_image> <database_dir> <method> [N]
+python3 show_matches.py <target_image> <database_dir> <method> [N] [--embeds <csv>]
 
 # Examples:
 python3 show_matches.py olympus/pic.1016.jpg olympus baseline 3
-python3 show_matches.py olympus/pic.0164.jpg olympus dnn 5
-python3 show_matches.py olympus/pic.0274.jpg olympus custom 5
+python3 show_matches.py olympus/pic.0164.jpg olympus dnn 5 --embeds ResNet18_olym.csv
+python3 show_matches.py olympus/pic.0274.jpg olympus custom 5 --embeds ResNet18_olym.csv
 \end{verbatim}
 
 The script is purely a frontend; all feature computation and matching is still
