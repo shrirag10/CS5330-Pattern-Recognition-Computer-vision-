@@ -50,15 +50,15 @@ def run_match(target, db_dir, method, n, embeds_csv=None):
         parts = line.split(".")
         if len(parts) < 2:
             continue
-        rank = int(parts[0].strip())
-        rest = ".".join(parts[1:]).strip()
-        fname = rest.split("  ")[0].strip()
-        score_str = rest.split("score: ")[-1].rstrip(")")
         try:
+            rank = int(parts[0].strip())
+            rest = ".".join(parts[1:]).strip()
+            fname = rest.split("  ")[0].strip()
+            score_str = rest.split("score: ")[-1].rstrip(")")
             score = float(score_str)
-        except ValueError:
-            score = 0.0
-        matches.append((rank, fname, score))
+            matches.append((rank, fname, score))
+        except (ValueError, IndexError):
+            continue  # skip malformed or unexpected lines
     return matches
 
 
