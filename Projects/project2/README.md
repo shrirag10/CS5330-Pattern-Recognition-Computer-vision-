@@ -20,6 +20,13 @@
 cmake -S . -B build && cmake --build build
 ```
 
+## Run All Tasks
+
+```bash
+./run.sh all       # run all tasks
+./run.sh 1         # run a specific task (1-7)
+```
+
 ---
 
 ## Running the Matcher
