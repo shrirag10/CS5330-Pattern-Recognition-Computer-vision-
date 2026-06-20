@@ -1,6 +1,7 @@
 #include "features.h"
 #include <cmath>
 #include <iostream>
+#include <fstream>
 
 std::vector<RegionFeatures> computeRegionFeatures(const cv::Mat &labelImg, int numRegions) {
     std::vector<RegionFeatures> results;
@@ -135,4 +136,18 @@ void drawRegionFeatures(cv::Mat &dst, const std::vector<RegionFeatures> &feature
         cv::putText(dst, angleText, textPos + cv::Point(1, 31), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
         cv::putText(dst, angleText, textPos + cv::Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
     }
+}
+
+bool saveTrainingInstance(const std::string &dbPath, const std::string &label, const std::vector<double> &features) {
+    std::ofstream dbFile(dbPath, std::ios_base::app);
+    if (!dbFile.is_open()) {
+        std::cerr << "[Error] Could not open database file: " << dbPath << std::endl;
+        return false;
+    }
+    dbFile << label;
+    for (double val : features) {
+        dbFile << "," << val;
+    }
+    dbFile << "\n";
+    return true;
 }

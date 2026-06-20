@@ -33,4 +33,14 @@ std::vector<RegionFeatures> computeRegionFeatures(const cv::Mat &labelImg, int n
  */
 void drawRegionFeatures(cv::Mat &dst, const std::vector<RegionFeatures> &features);
 
+/**
+ * @brief Appends a training label and its features to a CSV database file.
+ * 
+ * @param dbPath Path to the CSV database file.
+ * @param label The category/class name of the object.
+ * @param features The feature vector to write.
+ * @return true if successfully saved, false otherwise.
+ */
+bool saveTrainingInstance(const std::string &dbPath, const std::string &label, const std::vector<double> &features);
+
 #endif // FEATURES_H
