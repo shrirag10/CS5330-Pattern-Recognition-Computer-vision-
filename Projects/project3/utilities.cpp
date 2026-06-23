@@ -35,16 +35,7 @@ int getEmbedding( cv::Mat &src, cv::Mat &embedding, cv::dnn::Net &net, int debug
 			  CV_32F ); // output depth/type
 
   net.setInput( blob );
-  try {
-      embedding = net.forward( "resnetv22_flatten0_reshape0" );
-  } catch (...) {
-      try {
-          embedding = net.forward( "onnx_node!resnetv22_flatten0_reshape0" );
-      } catch (const cv::Exception &e) {
-          std::cerr << "[Error] Failed to forward ONNX network: " << e.what() << std::endl;
-          return -1;
-      }
-  }
+  embedding = net.forward( "output" ); // flatten layer output in PyTorch ResNet18 ONNX export (opset 12)
 
   if(debug) {
     std::cout << embedding << std::endl;

@@ -15,7 +15,7 @@ struct RegionFeatures {
     double orientation;        // primary axis orientation in radians
     double elongation;         // max / min moments of inertia (ratio of eigenvalues)
     std::vector<double> featureVec; // feature vector: [elongation, h1, h2]
-    
+
     // OBB bounds (Task 4)
     double minE1;
     double maxE1;
