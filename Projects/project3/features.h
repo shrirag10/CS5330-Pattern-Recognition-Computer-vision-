@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <string>
 
 struct RegionFeatures {
     int labelId;
@@ -68,5 +69,14 @@ double computeCosineDistance(const cv::Mat &embA, const std::vector<float> &embB
 int getEmbedding(cv::Mat &src, cv::Mat &embedding, cv::dnn::Net &net, int debug);
 void prepEmbeddingImage(cv::Mat &frame, cv::Mat &embimage, int cx, int cy, float theta,
                          float minE1, float maxE1, float minE2, float maxE2, int debug);
+
+struct TrainingEntry {
+    std::string label;
+    std::vector<double> features;
+};
+
+std::vector<TrainingEntry> loadDatabase(const std::string &dbPath);
+
+std::string classifyFeatures(const std::vector<double> &query, const std::vector<TrainingEntry> &db);
 
 #endif // FEATURES_H

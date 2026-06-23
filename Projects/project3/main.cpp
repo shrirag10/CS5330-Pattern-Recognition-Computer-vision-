@@ -136,6 +136,13 @@ int main(int argc, char *argv[]) {
     std::vector<EmbeddingInstance> embedDb = loadEmbeddingDatabase(embedDbPath);
     std::cout << "[Info] Loaded " << embedDb.size() << " embedding database records." << std::endl;
 
+    // load classification DB
+    std::vector<TrainingEntry> trainingDB = loadDatabase("database.csv");
+    if (trainingDB.empty()) {
+        std::cout << "[Warning] No training data found. Run ./train first." << std::endl;
+    } else {
+        std::cout << "[Info] Loaded " << trainingDB.size() << " training entries." << std::endl;
+    }
     int manualThreshold = 128;
     bool useDynamic = true;
     bool invertThreshold = true;
@@ -171,6 +178,12 @@ int main(int argc, char *argv[]) {
                 // Otherwise move to next available
                 currentImgIdx = (currentImgIdx + 1) % devImages.size();
                 continue;
+            }
+            // downscale large images to fit screen
+            int maxDim = 800;
+            if (frame.cols > maxDim || frame.rows > maxDim) {
+                double scale = std::min((double)maxDim / frame.cols, (double)maxDim / frame.rows);
+                cv::resize(frame, frame, cv::Size(), scale, scale);
             }
         }
 
@@ -226,6 +239,17 @@ int main(int argc, char *argv[]) {
         
         // Draw feature overlays on the clean frame display
         drawRegionFeatures(displayFrame, features);
+
+        // classify largest region and overlay label
+        if (!features.empty() && !trainingDB.empty()) {
+            RegionFeatures largest = features[0];
+            for (const auto &rf : features)
+                if (rf.area > largest.area) largest = rf;
+            std::string label = classifyFeatures(largest.featureVec, trainingDB);
+            cv::putText(displayFrame, label,
+                        cv::Point((int)largest.centroid.x - 30, (int)largest.centroid.y - 20),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(0, 255, 0), 3, cv::LINE_AA);
+        }
 
         if (showThresholdInMain) {
             cv::cvtColor(cleaned, displayFrame, cv::COLOR_GRAY2BGR);
