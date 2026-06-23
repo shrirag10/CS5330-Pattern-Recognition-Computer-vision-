@@ -274,6 +274,12 @@ Watch     & 0 & 0 & 0 & 0 & \textbf{2} \\
 The key finding from comparing both datasets is that \textbf{dataset quality and object suitability have a larger impact on accuracy than classifier choice}. Objects with similar 2D silhouettes will be confused regardless of the distance metric used.
 
 %------------------------------------------------------------
+\subsection*{Task 8: Demo Video}
+%------------------------------------------------------------
+
+A demonstration video is included with this submission as \texttt{task8.mp4}. The video shows the recognition system running on four test images — Carrot, Glasses, PhoneCase, and Watch — each from the held-out test set. For each image, the three output windows are visible: the \textbf{Original Feed} with the predicted class label overlaid in green, the \textbf{Thresholded View} showing the binary mask produced by ISODATA thresholding, and the \textbf{Regions Map} showing the color-coded connected components. The classifier correctly identifies all four objects using the classical nearest-neighbor pipeline trained on Dataset 2.
+
+%------------------------------------------------------------
 \subsection*{Task 9: ResNet18 DNN Embedding Classifier}
 %------------------------------------------------------------
 

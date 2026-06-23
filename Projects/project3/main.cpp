@@ -119,16 +119,18 @@ int main(int argc, char *argv[]) {
     cv::namedWindow("Thresholded View", cv::WINDOW_AUTOSIZE);
     cv::namedWindow("Regions Map", cv::WINDOW_AUTOSIZE);
 
-    // Load ONNX ResNet18 Model (Task 9)
-    std::string modelPath = "../resnet18-v2-7.onnx";
-    if (!std::filesystem::exists(modelPath)) {
-        modelPath = "/home/shrirag10/Projects/CS5330/Projects/resnet18-v2-7.onnx";
-    }
-    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelPath);
-    if (net.empty()) {
-        std::cerr << "[Warning] Could not load ONNX model from: " << modelPath << std::endl;
+    // Load ONNX ResNet18 Model (Task 9) — optional, classical classifier works without it
+    std::string modelPath = "resnet18.onnx";
+    cv::dnn::Net net;
+    if (std::filesystem::exists(modelPath)) {
+        try {
+            net = cv::dnn::readNetFromONNX(modelPath);
+            std::cout << "[Info] Loaded ONNX model from: " << modelPath << std::endl;
+        } catch (const cv::Exception &e) {
+            std::cerr << "[Warning] Could not load ONNX model: " << e.what() << std::endl;
+        }
     } else {
-        std::cout << "[Info] Loaded ONNX model successfully from: " << modelPath << std::endl;
+        std::cout << "[Info] No ONNX model found, running classical classifier only." << std::endl;
     }
 
     // Load Embedding Database (Task 9)
