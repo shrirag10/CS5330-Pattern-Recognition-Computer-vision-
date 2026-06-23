@@ -14,6 +14,22 @@ struct RegionFeatures {
     double orientation;        // primary axis orientation in radians
     double elongation;         // max / min moments of inertia (ratio of eigenvalues)
     std::vector<double> featureVec; // feature vector: [elongation, h1, h2]
+    
+    // OBB bounds (Task 4)
+    double minE1;
+    double maxE1;
+    double minE2;
+    double maxE2;
+
+    // Classification result (Task 9)
+    std::string className;
+    double classDist;
+};
+
+// Embedding Database Instance for Task 9
+struct EmbeddingInstance {
+    std::string label;
+    std::vector<float> embedding;
 };
 
 /**
@@ -42,5 +58,15 @@ void drawRegionFeatures(cv::Mat &dst, const std::vector<RegionFeatures> &feature
  * @return true if successfully saved, false otherwise.
  */
 bool saveTrainingInstance(const std::string &dbPath, const std::string &label, const std::vector<double> &features);
+
+// Embedding Database Helpers (Task 9)
+bool saveEmbeddingInstance(const std::string &dbPath, const std::string &label, const cv::Mat &embedding);
+std::vector<EmbeddingInstance> loadEmbeddingDatabase(const std::string &dbPath);
+double computeCosineDistance(const cv::Mat &embA, const std::vector<float> &embB);
+
+// External Utilities from utilities.cpp (Task 9)
+int getEmbedding(cv::Mat &src, cv::Mat &embedding, cv::dnn::Net &net, int debug);
+void prepEmbeddingImage(cv::Mat &frame, cv::Mat &embimage, int cx, int cy, float theta,
+                         float minE1, float maxE1, float minE2, float maxE2, int debug);
 
 #endif // FEATURES_H

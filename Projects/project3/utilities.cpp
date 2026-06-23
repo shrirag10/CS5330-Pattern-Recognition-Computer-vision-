@@ -35,7 +35,16 @@ int getEmbedding( cv::Mat &src, cv::Mat &embedding, cv::dnn::Net &net, int debug
 			  CV_32F ); // output depth/type
 
   net.setInput( blob );
-  embedding = net.forward( "onnx_node!resnetv22_flatten0_reshape0" );
+  try {
+      embedding = net.forward( "resnetv22_flatten0_reshape0" );
+  } catch (...) {
+      try {
+          embedding = net.forward( "onnx_node!resnetv22_flatten0_reshape0" );
+      } catch (const cv::Exception &e) {
+          std::cerr << "[Error] Failed to forward ONNX network: " << e.what() << std::endl;
+          return -1;
+      }
+  }
 
   if(debug) {
     std::cout << embedding << std::endl;
