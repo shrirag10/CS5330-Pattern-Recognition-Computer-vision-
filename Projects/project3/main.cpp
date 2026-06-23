@@ -3,6 +3,7 @@
 #include <string>
 #include <filesystem>
 #include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
 #include "threshold.h"
 #include "cleanup.h"
 #include "segment.h"
@@ -26,7 +27,8 @@ int main(int argc, char *argv[]) {
               << "  '-' : Decrease morphological structuring element size\n"
               << "  '=' : Increase morphological structuring element size\n"
               << "  's' : Save current frame & processed images to disk\n"
-              << "  'r' : Record training sample to database.csv\n"
+              << "  'r' : Record training sample to database.csv (classical)\n"
+              << "  'e' : Record embedding sample to embeddings_database.csv (embedding)\n"
               << "  'n' : Next static image (only when camera is not used)\n"
               << "  'p' : Previous static image (only when camera is not used)\n"
               << "========================================================\n" << std::endl;
@@ -117,6 +119,23 @@ int main(int argc, char *argv[]) {
     cv::namedWindow("Thresholded View", cv::WINDOW_AUTOSIZE);
     cv::namedWindow("Regions Map", cv::WINDOW_AUTOSIZE);
 
+    // Load ONNX ResNet18 Model (Task 9)
+    std::string modelPath = "../resnet18-v2-7.onnx";
+    if (!std::filesystem::exists(modelPath)) {
+        modelPath = "/home/shrirag10/Projects/CS5330/Projects/resnet18-v2-7.onnx";
+    }
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelPath);
+    if (net.empty()) {
+        std::cerr << "[Warning] Could not load ONNX model from: " << modelPath << std::endl;
+    } else {
+        std::cout << "[Info] Loaded ONNX model successfully from: " << modelPath << std::endl;
+    }
+
+    // Load Embedding Database (Task 9)
+    std::string embedDbPath = "saved_thresholds/embeddings_database.csv";
+    std::vector<EmbeddingInstance> embedDb = loadEmbeddingDatabase(embedDbPath);
+    std::cout << "[Info] Loaded " << embedDb.size() << " embedding database records." << std::endl;
+
     int manualThreshold = 128;
     bool useDynamic = true;
     bool invertThreshold = true;
@@ -128,6 +147,7 @@ int main(int argc, char *argv[]) {
     cv::Mat frame, binary, cleaned, labelImg, coloredRegions;
 
     bool isTypingLabel = false;
+    bool trainEmbeddingMode = false;
     std::string typedLabel = "";
 
     while (true) {
@@ -176,6 +196,31 @@ int main(int argc, char *argv[]) {
         // Compute features
         std::vector<RegionFeatures> features = computeRegionFeatures(labelImg, numRegions);
 
+        // Perform Embedding 1-NN Classification (Task 9)
+        if (!net.empty() && !embedDb.empty()) {
+            for (auto &rf : features) {
+                cv::Mat embImg, embedding;
+                prepEmbeddingImage(frame, embImg, rf.centroid.x, rf.centroid.y, rf.orientation,
+                                   rf.minE1, rf.maxE1, rf.minE2, rf.maxE2, 0);
+                if (!embImg.empty()) {
+                    int err = getEmbedding(embImg, embedding, net, 0);
+                    if (err == 0 && !embedding.empty()) {
+                        double minDist = 1e9;
+                        std::string bestLabel = "Unknown";
+                        for (const auto &dbInst : embedDb) {
+                            double dist = computeCosineDistance(embedding, dbInst.embedding);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                bestLabel = dbInst.label;
+                            }
+                        }
+                        rf.className = bestLabel;
+                        rf.classDist = minDist;
+                    }
+                }
+            }
+        }
+
         // Display results
         cv::Mat displayFrame = frame.clone();
         
@@ -193,7 +238,7 @@ int main(int argc, char *argv[]) {
         
         std::string hudText = "Threshold: " + std::to_string(activeThreshold) + " | Mode: " + modeStr;
         std::string hudText2 = "Inversion: " + invStr + " | Cleanup: " + cleanStr;
-        std::string hudText3 = "Regions: " + std::to_string(numRegions);
+        std::string hudText3 = "Regions: " + std::to_string(numRegions) + " | Embedding DB: " + std::to_string(embedDb.size());
         if (!useCamera && argPath.empty()) {
             hudText2 += " | File: " + devImages[currentImgIdx];
         }
@@ -242,11 +287,37 @@ int main(int argc, char *argv[]) {
                                 largest = rf;
                             }
                         }
-                        bool success = saveTrainingInstance("saved_thresholds/database.csv", typedLabel, largest.featureVec);
-                        if (success) {
-                            std::cout << "[Training Mode] Saved training instance of '" << typedLabel << "' to database.csv" << std::endl;
+                        if (trainEmbeddingMode) {
+                            if (net.empty()) {
+                                std::cout << "[Training Mode] Cannot save embedding: ONNX model not loaded!" << std::endl;
+                            } else {
+                                cv::Mat embImg, embedding;
+                                prepEmbeddingImage(frame, embImg, largest.centroid.x, largest.centroid.y, largest.orientation,
+                                                   largest.minE1, largest.maxE1, largest.minE2, largest.maxE2, 0);
+                                if (!embImg.empty()) {
+                                    int err = getEmbedding(embImg, embedding, net, 0);
+                                    if (err == 0 && !embedding.empty()) {
+                                        bool success = saveEmbeddingInstance(embedDbPath, typedLabel, embedding);
+                                        if (success) {
+                                            std::cout << "[Training Mode] Saved embedding instance of '" << typedLabel << "' to " << embedDbPath << std::endl;
+                                            embedDb = loadEmbeddingDatabase(embedDbPath);
+                                        } else {
+                                            std::cout << "[Training Mode] Failed to save embedding instance!" << std::endl;
+                                        }
+                                    } else {
+                                        std::cout << "[Training Mode] Failed to compute embedding for region!" << std::endl;
+                                    }
+                                } else {
+                                    std::cout << "[Training Mode] Failed to prepare region ROI image!" << std::endl;
+                                }
+                            }
                         } else {
-                            std::cout << "[Training Mode] Failed to save training instance!" << std::endl;
+                            bool success = saveTrainingInstance("saved_thresholds/database.csv", typedLabel, largest.featureVec);
+                            if (success) {
+                                std::cout << "[Training Mode] Saved training instance of '" << typedLabel << "' to database.csv" << std::endl;
+                            } else {
+                                std::cout << "[Training Mode] Failed to save training instance!" << std::endl;
+                            }
                         }
                     }
                 } else {
@@ -304,8 +375,18 @@ int main(int argc, char *argv[]) {
                     std::cout << "[Training Mode] No regions detected in frame to train!" << std::endl;
                 } else {
                     isTypingLabel = true;
+                    trainEmbeddingMode = false;
                     typedLabel = "";
-                    std::cout << "[Training Mode] Enter label name in the GUI window and press Enter." << std::endl;
+                    std::cout << "[Training Mode] Enter classical label name in the GUI window and press Enter." << std::endl;
+                }
+            } else if (key == 'e') {
+                if (features.empty()) {
+                    std::cout << "[Training Mode] No regions detected in frame to train!" << std::endl;
+                } else {
+                    isTypingLabel = true;
+                    trainEmbeddingMode = true;
+                    typedLabel = "";
+                    std::cout << "[Training Mode] Enter embedding label name in the GUI window and press Enter." << std::endl;
                 }
             } else if (key == 's') {
                 std::time_t t = std::time(nullptr);
