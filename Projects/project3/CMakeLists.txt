@@ -10,8 +10,8 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 add_executable(recognition main.cpp threshold.cpp cleanup.cpp segment.cpp features.cpp utilities.cpp)
 target_link_libraries(recognition ${OpenCV_LIBS})
 
-add_executable(train train.cpp threshold.cpp cleanup.cpp segment.cpp features.cpp)
+add_executable(train train.cpp threshold.cpp cleanup.cpp segment.cpp features.cpp utilities.cpp)
 target_link_libraries(train ${OpenCV_LIBS})
 
-add_executable(evaluate evaluate.cpp threshold.cpp cleanup.cpp segment.cpp features.cpp)
+add_executable(evaluate evaluate.cpp threshold.cpp cleanup.cpp segment.cpp features.cpp utilities.cpp)
 target_link_libraries(evaluate ${OpenCV_LIBS})
