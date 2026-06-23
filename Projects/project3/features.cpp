@@ -2,6 +2,9 @@
 #include <cmath>
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include <string>
+#include <numeric>
 
 std::vector<RegionFeatures> computeRegionFeatures(const cv::Mat &labelImg, int numRegions) {
     std::vector<RegionFeatures> results;
@@ -150,4 +153,61 @@ bool saveTrainingInstance(const std::string &dbPath, const std::string &label, c
     }
     dbFile << "\n";
     return true;
+}
+
+std::vector<TrainingEntry> loadDatabase(const std::string &dbPath) {
+    std::vector<TrainingEntry> db;
+    std::ifstream file(dbPath);
+    if (!file.is_open()) {
+        std::cerr << "[Error] Could not open database: " << dbPath << std::endl;
+        return db;
+    }
+    std::string line;
+    std::getline(file, line); // skip header
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
+        std::stringstream ss(line);
+        std::string token;
+        TrainingEntry entry;
+        std::getline(ss, entry.label, ',');
+        while (std::getline(ss, token, ','))
+            entry.features.push_back(std::stod(token));
+        if (!entry.label.empty() && !entry.features.empty())
+            db.push_back(entry);
+    }
+    return db;
+}
+
+std::string classifyFeatures(const std::vector<double> &query, const std::vector<TrainingEntry> &db) {
+    if (db.empty() || query.empty()) return "unknown";
+
+    int numFeatures = (int)query.size();
+
+    // compute per-feature stdev across all DB entries
+    std::vector<double> stdevs(numFeatures, 1.0);
+    for (int f = 0; f < numFeatures; f++) {
+        double mean = 0.0;
+        for (const auto &e : db) mean += e.features[f];
+        mean /= db.size();
+        double var = 0.0;
+        for (const auto &e : db) var += (e.features[f] - mean) * (e.features[f] - mean);
+        double sd = std::sqrt(var / db.size());
+        stdevs[f] = (sd < 1e-6) ? 1.0 : sd; // avoid division by zero
+    }
+
+    // nearest neighbor with scaled Euclidean distance
+    double bestDist = std::numeric_limits<double>::max();
+    std::string bestLabel = "unknown";
+    for (const auto &entry : db) {
+        double dist = 0.0;
+        for (int f = 0; f < numFeatures; f++) {
+            double diff = (query[f] - entry.features[f]) / stdevs[f];
+            dist += diff * diff;
+        }
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestLabel = entry.label;
+        }
+    }
+    return bestLabel;
 }

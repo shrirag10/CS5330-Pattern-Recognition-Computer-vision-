@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <string>
 
 struct RegionFeatures {
     int labelId;
@@ -42,5 +43,14 @@ void drawRegionFeatures(cv::Mat &dst, const std::vector<RegionFeatures> &feature
  * @return true if successfully saved, false otherwise.
  */
 bool saveTrainingInstance(const std::string &dbPath, const std::string &label, const std::vector<double> &features);
+
+struct TrainingEntry {
+    std::string label;
+    std::vector<double> features;
+};
+
+std::vector<TrainingEntry> loadDatabase(const std::string &dbPath);
+
+std::string classifyFeatures(const std::vector<double> &query, const std::vector<TrainingEntry> &db);
 
 #endif // FEATURES_H
