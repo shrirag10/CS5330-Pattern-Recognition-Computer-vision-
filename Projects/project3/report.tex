@@ -30,7 +30,7 @@ In this project, we developed a computer vision system to recognize 2D objects i
 
 All core image processing steps are written from scratch without using OpenCV's high-level functions. We implemented our own thresholding, morphological filters, connected components finder, and moment-based feature extraction.
 
-We divided the work. Shriman Raghav Srinivasan implemented Tasks 1 through 4 (preprocessing, segmentation, and OBB feature extraction) and Task 9 (deep network embedding classification). Teammate Shyam Sreenivasan is responsible for implementing Tasks 5 through 7 (collecting training data and implementing the classical standardized distance classifier).
+We divided the work. Shriman Raghav Srinivasan implemented Tasks 1 through 4 (preprocessing, segmentation, and OBB feature extraction) and Task 9 (deep network embedding classification). Shyam Sreenivasan implemented Tasks 5 through 7 (collecting training data, implementing the standardized Euclidean distance classifier, and evaluating system performance with confusion matrices).
 
 % ============================================================
 \section*{Source Code}
@@ -158,6 +158,122 @@ Img 5 & 4 & (34.621, 493.549) & 4.121 & 23.250 & [-46.502, 74.050] & [-24.277, 3
 \end{figure}
 
 %------------------------------------------------------------
+\subsection*{Task 5: Collecting Training Data}
+%------------------------------------------------------------
+
+Training data is collected in batch mode from a structured folder of labeled images. Each subfolder name is used as the class label. The pipeline runs on every image, extracts the largest region's feature vector, and appends a row to a CSV database file.
+
+\begin{verbatim}
+train_data01/
+  PhoneCase/    <- folder name is the label
+  Glasses/
+  Carrot/
+  Watch/
+  Clip/
+\end{verbatim}
+
+Each subfolder contains approximately 8 JPG images of the same object in different poses and orientations. To build the database:
+
+\begin{verbatim}
+./build/train --dataset train_data01 --output database.csv --classical
+\end{verbatim}
+
+The output \texttt{database.csv} contains one row per image with the label and three shape features:
+
+\begin{verbatim}
+label,elongation,h1,h2
+PhoneCase,3.79811,0.211703,0.015242
+...
+\end{verbatim}
+
+Where \texttt{elongation} is the ratio of the principal eigenvalues of the covariance tensor, and \texttt{h1}, \texttt{h2} are normalized Hu moments that are invariant to translation, scale, and rotation.
+
+PhoneCase produced highly consistent features (elongation $\approx 3.8$) across all poses. Glasses showed high variance in elongation (1.3--19.2) due to the arms being open or closed in different images — a known limitation of shape-only features. Watch also showed high variance due to reflections on the face affecting segmentation.
+
+Figure~\ref{fig:pipeline_strip} shows the full pipeline applied to a sample training image of each object class.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{report_imgs/carrot_0_strip.png}
+    \caption*{Carrot}
+    \vspace{4pt}
+    \includegraphics[width=\textwidth]{report_imgs/glasses_0_strip.png}
+    \caption*{Glasses}
+    \vspace{4pt}
+    \includegraphics[width=\textwidth]{report_imgs/watch_0_strip.png}
+    \caption{Pipeline stages for three sample training images: (1)~Original, (2)~ISODATA threshold, (3)~Morphological cleanup, (4)~Colorized regions, (5)~Feature overlay with OBB and primary axis.}
+    \label{fig:pipeline_strip}
+\end{figure}
+
+%------------------------------------------------------------
+\subsection*{Task 6: Classifying New Images}
+%------------------------------------------------------------
+
+The system classifies a new image using nearest-neighbor matching with a scaled Euclidean distance metric. For each feature dimension, distances are normalized by the standard deviation across all training entries to prevent any single feature from dominating:
+
+\[
+d(\mathbf{x}_1, \mathbf{x}_2) = \sum_{i} \frac{(x_{1i} - x_{2i})^2}{\sigma_i^2}
+\]
+
+The training entry with the smallest distance is returned as the predicted label. In interactive mode, the predicted label is overlaid in green text above the object centroid in the Original Feed window. In batch mode:
+
+\begin{verbatim}
+./build/evaluate --dataset test_data01 --db database.csv --classical
+\end{verbatim}
+
+%------------------------------------------------------------
+\subsection*{Task 7: Evaluating System Performance}
+%------------------------------------------------------------
+
+The system was evaluated on two datasets with different object characteristics to understand the impact of dataset quality on classification performance.
+
+\subsubsection*{Dataset 1 — Unsuitable Objects}
+
+The first dataset contained objects with mixed colors and colorful packaging (Chips, Book, Coffee, Tape, Clip) photographed on a white background. These objects violate the requirement that objects should be predominantly dark-colored. The results show 50\% accuracy:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccccc}
+\toprule
+True $\backslash$ Predicted & Book & Chips & Clip & Coffee & Tape \\
+\midrule
+Book    & \textbf{2} & 0 & 0 & 0 & 0 \\
+Chips   & 2 & \textbf{0} & 0 & 0 & 0 \\
+Clip    & 0 & 0 & \textbf{2} & 0 & 0 \\
+Coffee  & 0 & 0 & 0 & \textbf{0} & 2 \\
+Tape    & 0 & 0 & 1 & 0 & \textbf{1} \\
+\bottomrule
+\end{tabular}
+\caption{Confusion matrix for Dataset 1. Accuracy: 5/10 (50\%).}
+\label{tab:confusion1}
+\end{table}
+
+Chips was confused with Book because both segment as large rectangular blobs. Coffee was confused with Tape because both produce compact rounded silhouettes. This demonstrates that the classifier relies purely on 2D shape — color and texture are completely discarded by the grayscale thresholding step.
+
+\subsubsection*{Dataset 2 — Better Suited Objects}
+
+The second dataset used dark, high-contrast objects (PhoneCase, Glasses, Carrot, Watch, Clip) on white paper, more suitable for the shape-based pipeline. The results show 100\% accuracy on the held-out test set:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccccc}
+\toprule
+True $\backslash$ Predicted & Carrot & Clip & Glasses & PhoneCase & Watch \\
+\midrule
+Carrot    & \textbf{2} & 0 & 0 & 0 & 0 \\
+Clip      & 0 & \textbf{2} & 0 & 0 & 0 \\
+Glasses   & 0 & 0 & \textbf{2} & 0 & 0 \\
+PhoneCase & 0 & 0 & 0 & \textbf{2} & 0 \\
+Watch     & 0 & 0 & 0 & 0 & \textbf{2} \\
+\bottomrule
+\end{tabular}
+\caption{Confusion matrix for Dataset 2. Accuracy: 10/10 (100\%).}
+\label{tab:confusion2}
+\end{table}
+
+The key finding from comparing both datasets is that \textbf{dataset quality and object suitability have a larger impact on accuracy than classifier choice}. Objects with similar 2D silhouettes will be confused regardless of the distance metric used.
+
+%------------------------------------------------------------
 \subsection*{Task 9: ResNet18 DNN Embedding Classifier}
 %------------------------------------------------------------
 
@@ -179,6 +295,14 @@ To train new objects, the user presses key \texttt{'e'}. The system freezes the 
 
 Implementing the morphological filter and region segmentation from scratch helped us understand the underlying mechanics of connected components. In Task 4, calculating the OBB required careful handling of coordinate frame rotations. Aligning the primary axis before cropping ensures scale and rotation invariance. The ResNet18 DNN embeddings proved highly robust. They represent semantic properties of objects, making them more resilient to minor thresholding defects than classical features.
 
+\textbf{Dataset quality matters more than classifier choice.} Our first dataset (Chips, Book, Coffee, Tape, Clip) achieved only 50\% accuracy with the classical classifier. The objects were colorful and had similar rectangular or compact silhouettes. Because the pipeline is grayscale-first, color is discarded entirely at the thresholding step. Chips and Book both segment as large flat rectangles; Coffee and Tape both produce compact blobs. The classifier had no shape signal to distinguish them.
+
+\textbf{Switching to shape-distinct objects resolved the problem.} The second dataset (PhoneCase, Glasses, Carrot, Watch, Clip) achieved 100\% accuracy. These objects have genuinely different 2D silhouettes: Carrot is a long thin tapered rod, Glasses are two joined circles, PhoneCase is a tall narrow rectangle, Watch is a compact square, and Clip is a small elongated loop. The elongation ratio and Hu moments alone were sufficient to separate them.
+
+\textbf{Intra-class variance is a real concern.} Even on the successful dataset, Glasses showed elongation values ranging from 1.3 to 19.2 across training images depending on whether the arms were open or closed. This highlights a limitation of moment-based features: they capture the silhouette of the entire visible object, so a change in pose that alters the silhouette drastically (like folding glasses) looks like a different object. For robust recognition, training images should cover the expected pose range, or the system should normalize pose before feature extraction.
+
+\textbf{The CNN classifier did not always outperform classical features.} On our dataset, classical nearest-neighbor achieved 100\% while the ResNet18 CNN embeddings achieved 90\%, with Watch misclassified as PhoneCase. This is likely because ResNet18 was pre-trained on ImageNet and the cropped, binary-adjacent patches we feed it are far from natural photographs. The classical features, being purely shape-based and explicitly invariant to scale and rotation, were better matched to what the pipeline actually produces.
+
 % ============================================================
 \section*{Acknowledgements}
 % ============================================================
@@ -186,7 +310,7 @@ Implementing the morphological filter and region segmentation from scratch helpe
 \begin{itemize}
     \item OpenCV documentation (\url{https://docs.opencv.org/4.x/}) for DNN loading and affine warping functions.
     \item Shriman Raghav Srinivasan implemented Tasks 1 through 4 (thresholding, morphology, segmentation, features, and OBB calculations) and Task 9 (deep network embedding classifier, cosine distance, and database integration).
-    \item Teammate Shyam Sreenivasan will implement Tasks 5, 6, and 7 (training database and standardized Euclidean distance matching).
+    \item Shyam Sreenivasan implemented Tasks 5, 6, and 7: batch training data collection, standardized Euclidean distance nearest-neighbor classification, and confusion matrix evaluation across two datasets.
 \end{itemize}
 
 \end{document}

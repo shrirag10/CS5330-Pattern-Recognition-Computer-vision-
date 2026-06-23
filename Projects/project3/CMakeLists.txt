@@ -15,3 +15,6 @@ target_link_libraries(train ${OpenCV_LIBS})
 
 add_executable(evaluate evaluate.cpp threshold.cpp cleanup.cpp segment.cpp features.cpp utilities.cpp)
 target_link_libraries(evaluate ${OpenCV_LIBS})
+
+add_executable(visualize_pipeline visualize_pipeline.cpp threshold.cpp cleanup.cpp segment.cpp features.cpp utilities.cpp)
+target_link_libraries(visualize_pipeline ${OpenCV_LIBS})
