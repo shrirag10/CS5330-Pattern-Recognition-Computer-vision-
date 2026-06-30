@@ -1,0 +1,6 @@
+build/
+*.aux
+*.log
+*.out
+calibration_params.xml
+calibration_frame_*.png
