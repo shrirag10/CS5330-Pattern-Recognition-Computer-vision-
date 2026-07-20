@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transfer Learning vs. Training from Scratch</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:#fff;color:#1e293b}
+
+/* ── Slide container ── */
+#deck{height:100vh;width:100vw;position:relative}
+.slide{position:absolute;top:0;left:0;width:100%;height:100%;padding:56px 72px;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .35s ease}
+.slide.active{opacity:1;pointer-events:auto}
+
+/* ── Shared elements ── */
+.slide-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#4F46E5;margin-bottom:12px}
+h1{font-size:42px;font-weight:700;letter-spacing:-.5px;line-height:1.15;color:#0f172a}
+h2{font-size:30px;font-weight:700;letter-spacing:-.3px;color:#0f172a;margin-bottom:24px}
+h3{font-size:17px;font-weight:600;color:#334155;margin-bottom:8px}
+p,li{font-size:15px;color:#475569;line-height:1.65}
+.sub{font-size:17px;color:#64748b;margin-top:10px;line-height:1.5}
+
+/* ── Two-column ── */
+.cols{display:flex;gap:48px;flex:1;min-height:0}
+.col{flex:1;display:flex;flex-direction:column;justify-content:center}
+.col-img{display:flex;align-items:center;justify-content:center}
+.col-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+
+/* ── Full-width image ── */
+.full-img{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;margin-top:16px}
+.full-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+
+/* ── Simple list ── */
+ul{list-style:none;margin-top:8px}
+ul li{padding:5px 0 5px 18px;position:relative}
+ul li::before{content:'•';position:absolute;left:0;color:#4F46E5;font-weight:700}
+
+/* ── Condition cards ── */
+.cond-cards{display:flex;gap:16px;margin-top:20px}
+.cond-card{flex:1;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;background:#f8fafc}
+.cond-card h3{margin-bottom:6px}
+.cond-card.ptf{border-left:4px solid #4F46E5}
+.cond-card.rf{border-left:4px solid #D97706}
+.cond-card.rfl{border-left:4px solid #059669}
+
+/* ── Stat row ── */
+.stats{display:flex;gap:24px;margin:20px 0}
+.stat{text-align:center;flex:1;padding:16px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc}
+.stat-num{font-size:32px;font-weight:700;line-height:1}
+.stat-num.ptf{color:#4F46E5}.stat-num.rf{color:#D97706}.stat-num.rfl{color:#059669}
+.stat-lbl{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-top:4px;font-weight:600}
+
+/* ── Table ── */
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+th{text-align:left;padding:10px 14px;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:2px solid #e2e8f0}
+td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#334155}
+tr:hover td{background:#f8fafc}
+.bold{font-weight:600;color:#0f172a}
+
+/* ── Callout ── */
+.callout{background:#f0f4ff;border-left:3px solid #4F46E5;padding:14px 18px;border-radius:0 8px 8px 0;margin-top:16px}
+.callout p{color:#334155;font-weight:500;font-size:14px}
+
+/* ── Finding cards ── */
+.findings{display:flex;gap:16px;margin-top:16px}
+.finding{flex:1;padding:18px 20px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0}
+.finding h3{font-size:15px}
+.finding p{font-size:13px;margin-top:6px}
+.finding .delta{font-size:22px;font-weight:700;margin:8px 0 4px}
+.finding .delta.ptf{color:#4F46E5}.finding .delta.rf{color:#D97706}.finding .delta.rfl{color:#059669}
+
+/* ── Architecture blocks ── */
+.arch-row{display:flex;align-items:center;gap:6px;margin:20px 0}
+.arch-block{padding:12px 14px;border-radius:8px;text-align:center;font-size:12px;font-weight:600;color:white}
+.arch-block.frozen{background:#4F46E5}
+.arch-block.trainable{background:#059669}
+.arch-arrow{color:#cbd5e1;font-size:18px}
+.arch-legend{display:flex;gap:24px;margin-top:8px}
+.arch-legend span{font-size:13px;color:#64748b;display:flex;align-items:center;gap:6px}
+.arch-legend .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.arch-legend .dot.f{background:#4F46E5}
+.arch-legend .dot.t{background:#059669}
+
+/* ── Progress bar ── */
+.pbar{display:flex;align-items:center;gap:12px;margin:8px 0}
+.pbar-label{width:100px;font-size:13px;font-weight:600;color:#334155;text-align:right}
+.pbar-track{flex:1;height:24px;background:#f1f5f9;border-radius:6px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:10px;font-size:12px;font-weight:700;color:white}
+.pbar-fill.ptf{background:#4F46E5}.pbar-fill.rf{background:#D97706}.pbar-fill.rfl{background:#059669}
+
+/* ── Footer ── */
+.footer{position:absolute;bottom:20px;left:72px;right:72px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#94a3b8}
+
+/* ── Page indicator ── */
+#indicator{position:fixed;bottom:20px;right:28px;font-size:12px;font-weight:600;color:#94a3b8;z-index:10}
+
+/* ── Title slide center ── */
+.center-slide{justify-content:center;align-items:center;text-align:center}
+.center-slide h1{font-size:48px}
+.divider{width:48px;height:3px;background:#4F46E5;border-radius:2px;margin:16px auto}
+</style>
+</head>
+<body>
+
+<div id="deck">
+
+<!-- ═══ SLIDE 1 — Title ═══ -->
+<div class="slide active" id="s0">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+    <div class="slide-label">CS 5330 · Final Project</div>
+    <h1>Transfer Learning vs.<br>Training from Scratch</h1>
+    <div class="divider"></div>
+    <p class="sub">A Capacity-Matched Empirical Study Using ResNet-18</p>
+    <p style="margin-top:28px;font-size:14px;color:#64748b">
+      <strong style="color:#334155">Shrirag Trolihal Santhosh</strong><br>
+      Northeastern University · Khoury College of Computer Sciences<br>
+      Summer 2026
+    </p>
+  </div>
+  <div class="footer"><span></span><span></span></div>
+</div>
+
+<!-- ═══ SLIDE 2 — Problem ═══ -->
+<div class="slide" id="s1">
+  <div class="slide-label">Motivation</div>
+  <h2>Problem Statement</h2>
+  <div class="cols">
+    <div class="col">
+      <p style="font-size:16px;color:#334155;line-height:1.7">
+        Transfer learning consistently outperforms training from scratch. But <strong>why</strong>?
+      </p>
+      <p style="margin-top:12px">Standard comparisons confound two distinct factors:</p>
+      <ul style="margin-top:12px">
+        <li><strong>Feature quality</strong> — Are pretrained representations inherently better?</li>
+        <li><strong>Trainable capacity</strong> — Does freezing layers simply reduce learnable parameters?</li>
+      </ul>
+      <div class="callout" style="margin-top:20px">
+        <p>We design a <strong>three-condition experiment</strong> that isolates each factor independently.</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="cond-cards" style="flex-direction:column">
+        <div class="cond-card ptf">
+          <h3>Pretrained-Frozen (PT-F)</h3>
+          <p>ImageNet weights · Early layers frozen · Only layer4 + fc trained</p>
+        </div>
+        <div class="cond-card rf">
+          <h3>Random-Frozen (R-F)</h3>
+          <p>Random weights · Early layers frozen · Same capacity as PT-F</p>
+        </div>
+        <div class="cond-card rfl">
+          <h3>Random-Full (R-FL)</h3>
+          <p>Random weights · All layers trainable · Full-scratch baseline</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 3 — Dataset ═══ -->
+<div class="slide" id="s2">
+  <div class="slide-label">Data</div>
+  <h2>Intel Image Classification Dataset</h2>
+  <div class="cols">
+    <div class="col" style="flex:.45">
+      <div class="stats" style="flex-wrap:wrap">
+        <div class="stat"><div class="stat-num ptf">14,034</div><div class="stat-lbl">Train images</div></div>
+        <div class="stat"><div class="stat-num ptf">3,000</div><div class="stat-lbl">Test images</div></div>
+        <div class="stat"><div class="stat-num ptf">6</div><div class="stat-lbl">Classes</div></div>
+      </div>
+      <h3>Classes</h3>
+      <p>Buildings · Forest · Glacier · Mountain · Sea · Street</p>
+      <h3 style="margin-top:16px">Preprocessing</h3>
+      <ul>
+        <li>Resize shorter side → 224 px</li>
+        <li>Center crop to 224 × 224</li>
+        <li>ImageNet mean/std normalization</li>
+        <li>Stratified 90/10 train-val split</li>
+      </ul>
+    </div>
+    <div class="col col-img" style="flex:.55">
+      <img src="assets/samples.png" alt="Sample images">
+    </div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 4 — Architecture ═══ -->
+<div class="slide" id="s3">
+  <div class="slide-label">Architecture</div>
+  <h2>ResNet-18 Layer Partitioning</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="arch-row">
+        <div class="arch-block frozen" style="width:70px">conv1<br>bn1</div><span class="arch-arrow">→</span>
+        <div class="arch-block frozen" style="width:66px">layer1</div><span class="arch-arrow">→</span>
+        <div class="arch-block frozen" style="width:66px">layer2</div><span class="arch-arrow">→</span>
+        <div class="arch-block frozen" style="width:66px">layer3</div><span class="arch-arrow">→</span>
+        <div class="arch-block trainable" style="width:74px">layer4</div><span class="arch-arrow">→</span>
+        <div class="arch-block trainable" style="width:56px">avg<br>pool</div><span class="arch-arrow">→</span>
+        <div class="arch-block trainable" style="width:60px">fc<br>(6-cls)</div>
+      </div>
+      <div class="arch-legend">
+        <span><span class="dot f"></span> Frozen θ<sub>f</sub> — 2.78M params</span>
+        <span><span class="dot t"></span> Trainable θ<sub>t</sub> — 8.40M params</span>
+      </div>
+
+      <div class="callout" style="margin-top:24px">
+        <p><strong>BN Handling:</strong> All Batch Normalization layers in θ<sub>f</sub> are locked in eval() mode during training. This prevents running statistics from drifting when weights are frozen.</p>
+      </div>
+
+      <h3 style="margin-top:24px">Isolating the Variables</h3>
+      <table>
+        <tr><th>Comparison</th><th>Controls for</th><th>Isolates</th></tr>
+        <tr><td class="bold">PT-F vs R-F</td><td>Same trainable capacity</td><td>Feature quality</td></tr>
+        <tr><td class="bold">R-F vs R-FL</td><td>Same initialization</td><td>Model capacity</td></tr>
+        <tr><td class="bold">PT-F vs R-FL</td><td>—</td><td>Overall transfer vs scratch</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 5 — Experimental Setup ═══ -->
+<div class="slide" id="s4">
+  <div class="slide-label">Experiments</div>
+  <h2>Experimental Setup</h2>
+  <div class="cols">
+    <div class="col">
+      <h3>Training Configuration</h3>
+      <table>
+        <tr><td class="bold">Optimizer</td><td>SGD</td></tr>
+        <tr><td class="bold">Learning Rate</td><td>1 × 10⁻³</td></tr>
+        <tr><td class="bold">Momentum</td><td>0.9</td></tr>
+        <tr><td class="bold">Weight Decay</td><td>1 × 10⁻⁴</td></tr>
+        <tr><td class="bold">Batch Size</td><td>32</td></tr>
+        <tr><td class="bold">Early Stopping</td><td>Patience = 5 (val loss)</td></tr>
+        <tr><td class="bold">Seeds</td><td>42, 100, 2026</td></tr>
+        <tr><td class="bold">Hardware</td><td>NVIDIA RTX 4060</td></tr>
+      </table>
+    </div>
+    <div class="col">
+      <h3>Pipeline Overview</h3>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:24px;margin-top:4px">
+        <div style="text-align:center;font-size:14px;color:#334155;line-height:2.2">
+          <div style="background:#e0e7ff;border-radius:6px;padding:8px;font-weight:600">Intel Dataset (14,034 images)</div>
+          <div style="color:#94a3b8">↓</div>
+          <div style="background:#e0e7ff;border-radius:6px;padding:8px;font-weight:600">Resize → Center Crop → Normalize</div>
+          <div style="color:#94a3b8">↓</div>
+          <div style="background:#e0e7ff;border-radius:6px;padding:8px;font-weight:600">Stratified 90/10 Split</div>
+          <div style="color:#94a3b8">↓</div>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <div style="background:#4F46E5;color:white;border-radius:6px;padding:8px 12px;font-weight:600;flex:1">PT-F</div>
+            <div style="background:#D97706;color:white;border-radius:6px;padding:8px 12px;font-weight:600;flex:1">R-F</div>
+            <div style="background:#059669;color:white;border-radius:6px;padding:8px 12px;font-weight:600;flex:1">R-FL</div>
+          </div>
+          <div style="color:#94a3b8">↓ × 3 seeds each</div>
+          <div style="background:#e0e7ff;border-radius:6px;padding:8px;font-weight:600">SGD + Early Stopping → Best Checkpoint</div>
+          <div style="color:#94a3b8">↓</div>
+          <div style="background:#e0e7ff;border-radius:6px;padding:8px;font-weight:600">Test Evaluation (3,000 images)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 6 — Results: Accuracy ═══ -->
+<div class="slide" id="s5">
+  <div class="slide-label">Results</div>
+  <h2>Test Accuracy</h2>
+  <div class="cols">
+    <div class="col" style="flex:.5">
+      <div class="stats" style="flex-direction:column;gap:12px">
+        <div class="stat" style="text-align:left;display:flex;align-items:center;gap:16px">
+          <div class="stat-num ptf" style="width:110px">93.3%</div>
+          <div><div class="stat-lbl" style="text-align:left">Pretrained-Frozen</div><div style="font-size:12px;color:#94a3b8">±0.23%</div></div>
+        </div>
+        <div class="stat" style="text-align:left;display:flex;align-items:center;gap:16px">
+          <div class="stat-num rfl" style="width:110px">84.7%</div>
+          <div><div class="stat-lbl" style="text-align:left">Random-Full</div><div style="font-size:12px;color:#94a3b8">±1.87%</div></div>
+        </div>
+        <div class="stat" style="text-align:left;display:flex;align-items:center;gap:16px">
+          <div class="stat-num rf" style="width:110px">66.5%</div>
+          <div><div class="stat-lbl" style="text-align:left">Random-Frozen</div><div style="font-size:12px;color:#94a3b8">±4.04%</div></div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px">
+        <div class="pbar"><span class="pbar-label">PT-F</span><div class="pbar-track"><div class="pbar-fill ptf" style="width:93.3%">93.3%</div></div></div>
+        <div class="pbar"><span class="pbar-label">R-FL</span><div class="pbar-track"><div class="pbar-fill rfl" style="width:84.7%">84.7%</div></div></div>
+        <div class="pbar"><span class="pbar-label">R-F</span><div class="pbar-track"><div class="pbar-fill rf" style="width:66.5%">66.5%</div></div></div>
+      </div>
+    </div>
+    <div class="col col-img" style="flex:.5">
+      <img src="assets/bar.png" alt="Accuracy bar chart">
+    </div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 7 — Training Curves ═══ -->
+<div class="slide" id="s6">
+  <div class="slide-label">Results</div>
+  <h2>Training Dynamics</h2>
+  <div class="full-img">
+    <img src="assets/curves.png" alt="Training curves">
+  </div>
+  <div style="display:flex;gap:16px;margin-top:12px">
+    <div class="callout" style="flex:1;border-left-color:#4F46E5"><p><strong>PT-F:</strong> Starts high, converges in ~3 epochs. Minimal seed variance.</p></div>
+    <div class="callout" style="flex:1;border-left-color:#D97706"><p><strong>R-F:</strong> Stagnates — random frozen features create an information bottleneck.</p></div>
+    <div class="callout" style="flex:1;border-left-color:#059669"><p><strong>R-FL:</strong> Steady climb over 12+ epochs. Reaches ~85% but needs 2× time.</p></div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 8 — Convergence ═══ -->
+<div class="slide" id="s7">
+  <div class="slide-label">Results</div>
+  <h2>Convergence Speed</h2>
+  <div class="cols">
+    <div class="col col-img">
+      <img src="assets/convergence.png" alt="Convergence chart">
+    </div>
+    <div class="col" style="flex:.45">
+      <table>
+        <tr><th>Condition</th><th>Epochs</th><th>Time</th><th>Best Val Acc</th></tr>
+        <tr><td class="bold" style="color:#4F46E5">PT-F</td><td>8.0</td><td>1.7 min</td><td class="bold">93.8%</td></tr>
+        <tr><td class="bold" style="color:#D97706">R-F</td><td>8.7</td><td>1.9 min</td><td>67.8%</td></tr>
+        <tr><td class="bold" style="color:#059669">R-FL</td><td>15.0</td><td>7.1 min</td><td>86.3%</td></tr>
+      </table>
+      <div class="callout" style="margin-top:20px">
+        <p>Transfer learning achieves <strong>higher accuracy in 4× less time</strong> than training from scratch.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 9 — Confusion Matrices ═══ -->
+<div class="slide" id="s8">
+  <div class="slide-label">Results</div>
+  <h2>Confusion Matrices</h2>
+  <div class="full-img">
+    <img src="assets/confusion.png" alt="Confusion matrices">
+  </div>
+  <div style="display:flex;gap:16px;margin-top:12px">
+    <div class="callout" style="flex:1"><p><strong>Primary confusions:</strong> Glacier ↔ Mountain and Buildings ↔ Street across all conditions.</p></div>
+    <div class="callout" style="flex:1"><p><strong>Pretraining effect:</strong> PT-F dramatically reduces off-diagonal errors even for visually similar classes.</p></div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 10 — Per-class F1 ═══ -->
+<div class="slide" id="s9">
+  <div class="slide-label">Results</div>
+  <h2>Per-Class F1 Scores</h2>
+  <div class="cols">
+    <div class="col col-img" style="flex:.6">
+      <img src="assets/f1.png" alt="F1 comparison">
+    </div>
+    <div class="col" style="flex:.4">
+      <h3>Observations</h3>
+      <ul>
+        <li><strong>Forest</strong> has the highest F1 across all conditions — strong texture cues.</li>
+        <li><strong>Glacier</strong> and <strong>Mountain</strong> show the lowest F1 — visually similar terrain.</li>
+        <li>PT-F achieves >90% F1 on 5 of 6 classes.</li>
+        <li>R-F struggles most on <strong>Sea</strong> and <strong>Street</strong>.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 11 — Key Findings ═══ -->
+<div class="slide" id="s10">
+  <div class="slide-label">Analysis</div>
+  <h2>Key Findings</h2>
+  <div class="findings">
+    <div class="finding" style="border-left:4px solid #4F46E5">
+      <h3>1. Feature Quality Dominates</h3>
+      <p>PT-F vs R-F (same capacity)</p>
+      <div class="delta ptf">+26.7%</div>
+      <p>Pretrained features provide rich, transferable representations. Random frozen features are noise-like.</p>
+    </div>
+    <div class="finding" style="border-left:4px solid #059669">
+      <h3>2. Capacity Helps, But Less</h3>
+      <p>R-F vs R-FL (same init)</p>
+      <div class="delta rfl">+18.2%</div>
+      <p>Unlocking all parameters helps, but takes 2× longer and still falls 8.6% short of PT-F.</p>
+    </div>
+    <div class="finding" style="border-left:4px solid #7c3aed">
+      <h3>3. Transfer Wins Overall</h3>
+      <p>PT-F vs R-FL</p>
+      <div class="delta" style="color:#7c3aed">+8.6%  ·  4× faster</div>
+      <p>Pretrained features > more trainable parameters, especially under limited data and compute.</p>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:20px">
+    <p><strong>Conclusion:</strong> The performance gap is driven primarily by <strong>feature quality</strong>, not model capacity. Our capacity-matched control (R-F) proves this rigorously.</p>
+  </div>
+  <div class="footer"><span>Transfer Learning vs. Training from Scratch</span></div>
+</div>
+
+<!-- ═══ SLIDE 12 — Conclusion ═══ -->
+<div class="slide center-slide" id="s11">
+  <div class="slide-label">Conclusion</div>
+  <h2>Conclusion & Future Work</h2>
+  <div style="max-width:680px;text-align:left;margin:0 auto">
+    <div class="callout" style="margin-bottom:24px">
+      <p style="font-size:15px">Pretrained feature quality — not model capacity — is the primary driver of transfer learning's superiority in scene classification under limited data.</p>
+    </div>
+    <h3>Future Directions</h3>
+    <ul>
+      <li>Vary the partition boundary (freeze only layer1–2)</li>
+      <li>Extend to larger backbones (ResNet-50, ViT)</li>
+      <li>Investigate progressive unfreezing and learning rate warmup</li>
+      <li>Apply data augmentation to narrow the scratch gap</li>
+    </ul>
+    <div style="text-align:center;margin-top:36px">
+      <p style="font-size:14px;color:#94a3b8">Thank you</p>
+      <p style="font-size:13px;color:#94a3b8;margin-top:4px">Shrirag Trolihal Santhosh · Northeastern University</p>
+    </div>
+  </div>
+  <div class="footer"><span></span></div>
+</div>
+
+</div><!-- /deck -->
+
+<div id="indicator"></div>
+
+<script>
+const slides=document.querySelectorAll('.slide');
+let cur=0;
+const ind=document.getElementById('indicator');
+function show(n){
+  n=Math.max(0,Math.min(n,slides.length-1));
+  slides[cur].classList.remove('active');
+  cur=n;
+  slides[cur].classList.add('active');
+  ind.textContent=`${cur+1} / ${slides.length}`;
+}
+show(0);
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();show(cur+1)}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();show(cur-1)}
+  if(e.key==='Home'){e.preventDefault();show(0)}
+  if(e.key==='End'){e.preventDefault();show(slides.length-1)}
+});
+</script>
+</body>
+</html>
