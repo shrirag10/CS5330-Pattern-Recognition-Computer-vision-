@@ -1,0 +1,157 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{booktabs}
+
+% Input the automated results summary macros
+\input{results_summary.tex}
+
+\begin{document}
+
+\title{Transfer Learning versus Training from Scratch for Scene Image Classification}
+
+\author{
+\IEEEauthorblockN{Shriman Raghav Srinivasan}
+\IEEEauthorblockA{Khoury College of Computer Sciences, Northeastern University, Boston, MA \\
+Email: srinivasan.shri@northeastern.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+This paper presents a controlled, empirical comparison of transfer learning and training from scratch using the ResNet-18 architecture on the six-class Intel Image Classification dataset. To isolate the effects of feature pretraining quality from those of trainable capacity, we define a capacity-matched design featuring three training conditions: (i) \textit{pretrained-frozen}, where ImageNet-pretrained weights are loaded and early layers are frozen; (ii) \textit{random-frozen}, where early layers are randomly initialized and frozen as a capacity-matched control; and (iii) \textit{random-full}, where the entire network is trained from scratch. In all frozen conditions, batch normalization layers in the frozen block are kept in evaluation mode to prevent representation drift. The models are trained with validation-based early stopping across three distinct random seeds. Evaluation on the held-out test split demonstrates that the \textit{pretrained-frozen} model achieves a mean test accuracy of \pretrainedfrozenTestAccMean, significantly outperforming the \textit{random-frozen} (\randomfrozenTestAccMean) and \textit{random-full} (\randomfullTestAccMean) configurations. The results isolate a substantial accuracy benefit ($>50\%$) directly attributable to the quality of pretrained features under matched capacities, and illustrate the critical role of pretraining in low-compute, small-dataset regimes.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Transfer Learning, Image Classification, Parameter Freezing, Network Capacity, Empirical Analysis.
+\end{IEEEkeywords}
+
+\section{Introduction}
+Deep convolutional neural networks (CNNs) have achieved state-of-the-art performance on a wide range of computer vision tasks, but training them from randomly initialized weights usually requires extremely large labeled datasets and substantial compute budgets to avoid overfitting and ensure convergence. To address this, transfer learning has emerged as a standard practice where a model is initialized with weights learned on a massive source dataset (such as ImageNet) and subsequently adapted to a smaller target domain.
+
+A naive comparison between a pre-trained network with frozen early layers and a fully trained network from random initialization confounds two distinct factors: the quality of the pretrained representations, and the reduced trainable parameter count (trainable capacity) of the frozen network. 
+
+To resolve this ambiguity, this paper implements a three-condition experimental design to isolate these factors:
+\begin{enumerate}
+    \item \textbf{Pretrained-Frozen (PT-F):} ResNet-18 model initialized with ImageNet weights, where early layers ($\theta_f$) are frozen, and only the final convolutional block (\texttt{layer4}) and the classification head ($\theta_t$) are optimized.
+    \item \textbf{Random-Frozen (R-F):} A capacity-matched control identical to PT-F, but with $\theta_f$ randomly initialized and frozen.
+    \item \textbf{Random-Full (R-FL):} The entire ResNet-18 network is initialized randomly and fully trained.
+\end{enumerate}
+
+Comparing condition (i) vs (ii) directly isolates the effect of pretraining quality under capacity-matched settings. Comparing (ii) vs (iii) isolates the effect of network capacity under random initialization. We evaluate all conditions on the Intel Image Classification dataset, compiling results across multiple seeds with validation-based early stopping to perform a comprehensive comparison of final accuracy and convergence speed.
+
+\section{Related Work}
+The utility of pre-trained visual representations and the limits of transfer learning have been studied extensively:
+
+He et al.~\cite{he2016deep} introduced the Deep Residual Learning framework (ResNet), establishing that residual connections allow networks to be trained to much greater depths without optimization degradation. ResNet-18 serves as the standard, lightweight backbone in this work due to its computational feasibility and representative residual structure.
+
+Yosinski et al.~\cite{yosinski2014transferable} investigated the transferability of features in deep neural networks. They proved that first-layer features are general-purpose (e.g., edge and color detectors) regardless of the dataset, while final-layer features are task-specific. Crucially, they observed that freezing early layers maintains general features, but splitting a network mid-way can cause optimization difficulties due to co-adaptation of features in adjacent layers. This motivates our partition boundary, where only the final stage (\texttt{layer4}) and head are trainable.
+
+He et al.~\cite{he2019rethinking} challenged the necessity of ImageNet pre-training for target tasks in their seminal paper "Rethinking ImageNet Pre-training". They demonstrated that models trained from scratch (random initialization) can match or even exceed the accuracy of pre-trained models on target tasks such as COCO object detection, provided they are trained for long enough. They concluded that pre-training primarily speeds up convergence rather than improving generalization limits when data is sufficient. Our work explores whether these findings hold for scene classification under small data and tight training patience budgets.
+
+\section{Methods}
+\subsection{Base Architecture and Partitioning}
+We employ ResNet-18~\cite{he2016deep} as our base architecture. Let $f_\theta$ denote the network with parameters $\theta$. We partition $\theta$ into a frozen subset $\theta_f$ and a trainable subset $\theta_t$. 
+Following findings that early layers learn low-level, generic representations~\cite{yosinski2014transferable}, we define $\theta_f$ as the input convolution (\texttt{conv1}), first batchnorm (\texttt{bn1}), and the first three residual stages (\texttt{layer1}, \texttt{layer2}, \texttt{layer3}). The trainable subset $\theta_t$ consists of the final residual stage (\texttt{layer4}) and the 6-class output layer (\texttt{fc}), representing the task-specific adapter. 
+
+In total, $\theta_f$ contains 2,782,784 frozen parameters, while $\theta_t$ contains 8,396,806 trainable parameters (including batchnorm layers in \texttt{layer4} and the classification linear weights and bias).
+
+\subsection{Batch Normalization Handling}
+Batch Normalization (BN) layers keep track of running statistics (mean and variance) during training. If early layers ($\theta_f$) are frozen but their BN layers continue updating running statistics, the internal representation of the network will drift inconsistently, leading to severe optimization decay.
+To prevent this, we enforce that all BN layers within $\theta_f$ are explicitly set to evaluation mode (\texttt{model.eval()}) during training. Thus, their running statistics are frozen and they function as deterministic linear transforms matching their initialization.
+
+\subsection{Data Preprocessing and Splitting}
+The Intel Image Classification dataset~\cite{intelclassification} contains natural scene images of size $150 \times 150$ pixels across 6 classes: \textit{buildings}, \textit{forest}, \textit{glacier}, \textit{mountain}, \textit{sea}, and \textit{street}.
+Images are preprocessed identically across all conditions:
+\begin{enumerate}
+    \item Resized such that the shorter side is 224px.
+    \item Center-cropped to $224 \times 224$ pixels.
+    \item Normalized per-channel using ImageNet mean $\mu = [0.485, 0.456, 0.406]$ and standard deviation $\sigma = [0.229, 0.224, 0.225]$.
+\end{enumerate}
+
+The dataset is partitioned as follows: the standard training split (\texttt{seg\_train}) containing 14,034 images is divided into a 90\% training subset (12,631 images) and a 10\% validation subset (1,403 images) carved out using class-stratified sampling to preserve label distributions. The test split (\texttt{seg\_test}) containing 3,000 images is held out completely and only used for final model evaluation.
+
+\section{Experiments and Results}
+
+\subsection{Experimental Setup}
+For all three conditions, we optimize the trainable parameters $\theta_t$ to minimize the cross-entropy loss:
+\begin{equation}
+\mathcal{L}(\theta_t) = -\frac{1}{N} \sum_{i=1}^N \log p_\theta(y_i \mid x_i)
+\end{equation}
+Training uses SGD with momentum $\beta = 0.9$, weight decay $\lambda = 10^{-4}$, and a learning rate $\eta = 10^{-3}$. We set the batch size to 32. 
+
+To ensure fair comparison, validation loss is evaluated at the end of each epoch. We apply early stopping with a patience of 5 epochs: training terminates if validation loss fails to improve for 5 consecutive epochs, and the checkpoint with the lowest validation loss is saved. All experiments are executed across three seeds: 42, 100, and 2026.
+
+\subsection{Overall Test Performance}
+Table~\ref{tab:test_acc} summarizes the test accuracy (mean and standard deviation across seeds) and convergence speed (epochs to early stopping) for each condition.
+
+\begin{table}[h]
+\centering
+\caption{Test Accuracy and Convergence Speed Comparison}
+\label{tab:test_acc}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Condition} & \textbf{Mean Test Acc.} & \textbf{Std. Dev.} & \textbf{Mean Epochs} \\
+\midrule
+Pretrained-Frozen & \pretrainedfrozenTestAccMean & \pretrainedfrozenTestAccStd & \pretrainedfrozenValEpochsMean \\
+Random-Frozen & \randomfrozenTestAccMean & \randomfrozenTestAccStd & \randomfrozenValEpochsMean \\
+Random-Full & \randomfullTestAccMean & \randomfullTestAccStd & \randomfullValEpochsMean \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Detailed Class Metrics}
+For each condition, we identify the seed closest to the mean test accuracy (representative run) to report detailed class-wise metrics. These representative runs correspond to Seed \pretrainedfrozenClosestSeed\ for PT-F, Seed \randomfrozenClosestSeed\ for R-F, and Seed \randomfullClosestSeed\ for R-FL.
+
+Table~\ref{tab:class_metrics} details the per-class precision, recall, and F1-score for the representative seed of each condition.
+
+\begin{table}[h]
+\centering
+\caption{Per-Class Test Metrics for Representative Runs}
+\label{tab:class_metrics}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lccccccccc}
+\toprule
+ & \multicolumn{3}{c}{\textbf{Pretrained-Frozen}} & \multicolumn{3}{c}{\textbf{Random-Frozen}} & \multicolumn{3}{c}{\textbf{Random-Full}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+\textbf{Class} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} \\
+\midrule
+Buildings & \pretrainedfrozenRepPrecBuildings & \pretrainedfrozenRepRecBuildings & \pretrainedfrozenRepFBuildings & \randomfrozenRepPrecBuildings & \randomfrozenRepRecBuildings & \randomfrozenRepFBuildings & \randomfullRepPrecBuildings & \randomfullRepRecBuildings & \randomfullRepFBuildings \\
+Forest & \pretrainedfrozenRepPrecForest & \pretrainedfrozenRepRecForest & \pretrainedfrozenRepFForest & \randomfrozenRepPrecForest & \randomfrozenRepRecForest & \randomfrozenRepFForest & \randomfullRepPrecForest & \randomfullRepRecForest & \randomfullRepFForest \\
+Glacier & \pretrainedfrozenRepPrecGlacier & \pretrainedfrozenRepRecGlacier & \pretrainedfrozenRepFGlacier & \randomfrozenRepPrecGlacier & \randomfrozenRepRecGlacier & \randomfrozenRepFGlacier & \randomfullRepPrecGlacier & \randomfullRepRecGlacier & \randomfullRepFGlacier \\
+Mountain & \pretrainedfrozenRepPrecMountain & \pretrainedfrozenRepRecMountain & \pretrainedfrozenRepFMountain & \randomfrozenRepPrecMountain & \randomfrozenRepRecMountain & \randomfrozenRepFMountain & \randomfullRepPrecMountain & \randomfullRepRecMountain & \randomfullRepFMountain \\
+Sea & \pretrainedfrozenRepPrecSea & \pretrainedfrozenRepRecSea & \pretrainedfrozenRepFSea & \randomfrozenRepPrecSea & \randomfrozenRepRecSea & \randomfrozenRepFSea & \randomfullRepPrecSea & \randomfullRepRecSea & \randomfullRepFSea \\
+Street & \pretrainedfrozenRepPrecStreet & \pretrainedfrozenRepRecStreet & \pretrainedfrozenRepFStreet & \randomfrozenRepPrecStreet & \randomfrozenRepRecStreet & \randomfrozenRepFStreet & \randomfullRepPrecStreet & \randomfullRepRecStreet & \randomfullRepFStreet \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion and Summary}
+\subsection{Isolating Pretraining Quality}
+The comparison between \textit{pretrained-frozen} (PT-F) and \textit{random-frozen} (R-F) directly isolates the contribution of pretrained feature quality, as both configurations share identical trainable capacity and parameter freezing boundaries. As shown in Table~\ref{tab:test_acc}, PT-F achieves a massive performance lead over R-F, with a test accuracy gap exceeding 50\% on average. Because $\theta_f$ in R-F is randomly initialized and never updated, it generates low-level representations that are arbitrary and noise-like. The trainable block `layer4` is forced to map these arbitrary patterns into class predictions, severely limiting generalization. In contrast, the ImageNet pre-trained weights in PT-F furnish rich, highly organized, and generalizable features (such as edges, textures, and shape boundaries) that translate seamlessly to the natural scene categories of the Intel dataset.
+
+\subsection{Isolating Trainable Capacity}
+The comparison between \textit{random-frozen} (R-F) and \textit{random-full} (R-FL) isolates the effect of network capacity, as both start from random weight initializations. R-FL gains a significant advantage by allowing all parameters (including $\theta_f$) to adapt. This permits the early layers to optimize from raw pixel values to fit the target data distribution, creating useful, specialized filters. As a result, R-FL achieves a mean accuracy of \randomfullTestAccMean, compared to the restricted \randomfrozenTestAccMean\ of R-F. 
+
+However, R-FL takes substantially longer to train (converging in mean \randomfullValEpochsMean\ epochs compared to \randomfrozenValEpochsMean\ for R-F) and still falls short of the pre-trained PT-F model by a large margin. This indicates that while optimizing trainable capacity helps, it is insufficient to overcome the absence of high-quality initialization when dataset size and training epochs are bounded.
+
+\subsection{Class-wise Confusions}
+Our test confusion matrices show consistent patterns of category-specific confusion across all conditions, though the errors are far more pronounced in the random initialization models. 
+The primary confusion occurs between:
+\begin{itemize}
+    \item \textbf{Glacier vs. Mountain:} Visual features such as white snow, jagged ridges, and rock textures are shared heavily between these classes.
+    \item \textbf{Buildings vs. Street:} Images of streets frequently contain buildings in the background, and vice-versa, making the spatial context highly overlapping.
+\end{itemize}
+These confusions suggest that classification errors are primarily driven by semantic and visual ambiguities inherent to the dataset rather than flaws in the training configuration.
+
+\subsection{Summary}
+In this study, we conducted a rigorous, capacity-matched evaluation of transfer learning and training from scratch. Our experiments successfully isolated the effects of pre-training and capacity. We showed that pre-trained features provide an enormous boost in final generalization accuracy ($>50\%$) and converge significantly faster under early stopping. For computer vision applications with restricted datasets or compute constraints, leveraging transfer learning remains the most effective strategy.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

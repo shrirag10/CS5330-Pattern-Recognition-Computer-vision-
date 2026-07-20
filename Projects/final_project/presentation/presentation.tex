@@ -1,0 +1,130 @@
+\documentclass[aspectratio=169]{beamer}
+\usetheme{Madrid}
+\usecolortheme{default}
+
+% Input the automated results summary macros (go up one directory to report/)
+\input{../report/results_summary.tex}
+
+\title[Transfer Learning vs. Scratch]{Transfer Learning versus Training from Scratch for Scene Image Classification}
+\subtitle{CS 5330 Final Project}
+\author{Shriman Raghav Srinivasan}
+\institute[Northeastern]{Khoury College of Computer Sciences \\ Northeastern University}
+\date{July 2026}
+
+\begin{document}
+
+% Slide 1: Title
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% Slide 2: Introduction & Motivation
+\begin{frame}{Introduction \& Motivation}
+  \begin{block}{The Core Question}
+    How much of the benefit of Transfer Learning is due to \textbf{pre-trained feature quality}, and how much is due to \textbf{reduced trainable capacity} (fewer parameters to optimize)?
+  \end{block}
+  \begin{itemize}
+    \item A naive comparison between a pre-trained frozen network and a fully trained random network confounds feature quality and parameter capacity.
+    \item \textbf{Our Solution:} A capacity-matched three-condition experimental design:
+      \begin{enumerate}
+        \item \textbf{Pretrained-Frozen (PT-F):} Loaded with ImageNet weights; early layers frozen.
+        \item \textbf{Random-Frozen (R-F):} Randomly initialized; early layers frozen (Capacity Control).
+        \item \textbf{Random-Full (R-FL):} Randomly initialized; all layers trainable (Scratch Baseline).
+      \end{enumerate}
+  \end{itemize}
+\end{frame}
+
+% Slide 3: Model Architecture \& Partitioning
+\begin{frame}{Model Architecture \& Partitioning}
+  \begin{itemize}
+    \item \textbf{Base Model:} ResNet-18 architecture.
+    \item \textbf{Frozen Subset ($\theta_f$):} Input convolution (\texttt{conv1}), first batchnorm (\texttt{bn1}), and the first three residual stages (\texttt{layer1}, \texttt{layer2}, \texttt{layer3}) contain 2,782,784 parameters.
+    \item \textbf{Trainable Subset ($\theta_t$):} Final residual stage (\texttt{layer4}) and 6-class output head (\texttt{fc}) contain 8,396,806 parameters.
+    \item \textbf{Critical Technical Detail:} Batch Normalization layers in $\theta_f$ are forced into evaluation mode (\texttt{model.eval()}) during training. This prevents running statistics from drifting and ruining the representation.
+  \end{itemize}
+\end{frame}
+
+% Slide 4: Dataset \& Preprocessing
+\begin{frame}{Dataset \& Preprocessing}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \textbf{Intel Image Classification Dataset}
+      \begin{itemize}
+        \item Natural scene images across 6 classes: \textit{Buildings, Forest, Glacier, Mountain, Sea, Street}.
+        \item Preprocessing:
+          \begin{enumerate}
+            \item Resized shorter side to 224px.
+            \item Center-cropped to 224x224.
+            \item ImageNet channel mean \& std dev normalization.
+          \end{enumerate}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{Splits Structure}
+      \begin{itemize}
+        \item \textbf{Training (90\%):} 12,631 images.
+        \item \textbf{Validation (10\%):} 1,403 images (reproducible class-stratified split).
+        \item \textbf{Test (Held-out):} 3,000 images (exclusively for final reporting).
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% Slide 5: Experimental Configuration
+\begin{frame}{Experimental Configuration}
+  \begin{block}{Optimizer \& Loss}
+    We optimize the trainable parameters $\theta_t$ using Stochastic Gradient Descent (SGD) with Cross-Entropy Loss.
+  \end{block}
+  \begin{itemize}
+    \item \textbf{Hyperparameters:} Learning rate = 0.001, momentum = 0.9, weight decay = 1e-4. Batch size = 32.
+    \item \textbf{Early Stopping:} Validation loss is monitored; training stops after 5 consecutive epochs of no improvement.
+    \item \textbf{Robustness:} Each of the 3 conditions runs across 3 distinct random seeds (42, 100, 2026) to generate statistics.
+  \end{itemize}
+\end{frame}
+
+% Slide 6: Results - Accuracy and Convergence
+\begin{frame}{Results - Accuracy and Convergence}
+  \begin{table}
+    \centering
+    \caption{Test Accuracy and Convergence Speed Comparison}
+    \begin{tabular}{lccc}
+      \hline
+      \textbf{Condition} & \textbf{Mean Test Acc.} & \textbf{Std. Dev.} & \textbf{Mean Epochs} \\ \hline
+      Pretrained-Frozen & \pretrainedfrozenTestAccMean & \pretrainedfrozenTestAccStd & \pretrainedfrozenValEpochsMean \\
+      Random-Frozen & \randomfrozenTestAccMean & \randomfrozenTestAccStd & \randomfrozenValEpochsMean \\
+      Random-Full & \randomfullTestAccMean & \randomfullTestAccStd & \randomfullValEpochsMean \\ \hline
+    \end{tabular}
+  \end{table}
+  \begin{itemize}
+    \item \textbf{Key Takeaway:} PT-F achieves a massive accuracy boost ($>50\%$) over R-F, directly isolating the value of ImageNet pretrained representations.
+  \end{itemize}
+\end{frame}
+
+% Slide 7: Error Analysis \& Class Confusions
+\begin{frame}{Error Analysis \& Class Confusions}
+  \begin{itemize}
+    \item Representative seeds closest to the mean test accuracy:
+      \begin{itemize}
+        \item Pretrained-Frozen: Seed \pretrainedfrozenClosestSeed\ (\pretrainedfrozenRepAcc)
+        \item Random-Frozen: Seed \randomfrozenClosestSeed\ (\randomfrozenRepAcc)
+        \item Random-Full: Seed \randomfullClosestSeed\ (\randomfullRepAcc)
+      \end{itemize}
+    \item \textbf{Common Confusions Across All Conditions:}
+      \begin{itemize}
+        \item \textbf{Glacier vs. Mountain:} Visually similar snow layers and rock features.
+        \item \textbf{Buildings vs. Street:} Buildings naturally populate street backgrounds.
+      \end{itemize}
+    \item Confusion is a property of dataset visual similarity, not the initialization or capacity condition.
+  \end{itemize}
+\end{frame}
+
+% Slide 8: Discussion \& Takeaways
+\begin{frame}{Discussion \& Takeaways}
+  \begin{itemize}
+    \item \textbf{Pretraining is Essential:} For matched capacities, ImageNet pretraining yields a performance boost of $>50\%$. Arbitrary random weights in $\theta_f$ constrain the representation space.
+    \item \textbf{Scratch Limits:} Training from scratch with full capacity (R-FL) outperforms the frozen random control (R-F) but remains far inferior to transfer learning (PT-F), despite taking much longer to converge.
+    \item \textbf{Final Conclusion:} In compute-constrained and data-limited settings, pre-trained weights function as critical regularizers and convergence accelerators.
+  \end{itemize}
+\end{frame}
+
+\end{document}

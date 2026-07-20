@@ -1,0 +1,41 @@
+# Ignore dataset folder
+data/
+
+# Ignore PyTorch model checkpoints
+results/*.pth
+
+# Ignore Python cache and virtualenvs
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Ignore LaTeX auxiliary files (but keep report.pdf/presentation.pdf/presentation.pptx)
+report/*.aux
+report/*.log
+report/*.toc
+report/*.out
+report/*.nav
+report/*.snm
+report/*.synctex.gz
+report/*.fls
+report/*.fdb_latexmk
+report/*.bbl
+report/*.blg
+
+presentation/*.aux
+presentation/*.log
+presentation/*.toc
+presentation/*.out
+presentation/*.nav
+presentation/*.snm
+presentation/*.synctex.gz
+presentation/*.fls
+presentation/*.fdb_latexmk
+presentation/*.nav
+presentation/*.snm
+presentation/*.toc
+presentation/*.vrb
+
+# Mac system files
+.DS_Store
