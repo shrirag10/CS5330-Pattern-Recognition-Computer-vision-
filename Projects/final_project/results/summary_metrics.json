@@ -1,0 +1,71 @@
+{
+    "pretrained-frozen": {
+        "42": {
+            "epochs_trained": 9,
+            "best_epoch": 4,
+            "best_val_loss": 0.17432162684578442,
+            "best_val_acc": 0.942225392296719,
+            "duration_seconds": 114.35955595970154
+        },
+        "100": {
+            "epochs_trained": 8,
+            "best_epoch": 3,
+            "best_val_loss": 0.1782725377117261,
+            "best_val_acc": 0.9379457917261056,
+            "duration_seconds": 103.31831789016724
+        },
+        "2026": {
+            "epochs_trained": 7,
+            "best_epoch": 2,
+            "best_val_loss": 0.1776725918734805,
+            "best_val_acc": 0.9343794579172611,
+            "duration_seconds": 89.94862699508667
+        }
+    },
+    "random-frozen": {
+        "42": {
+            "epochs_trained": 11,
+            "best_epoch": 6,
+            "best_val_loss": 0.703108477907072,
+            "best_val_acc": 0.7410841654778887,
+            "duration_seconds": 142.89853405952454
+        },
+        "100": {
+            "epochs_trained": 9,
+            "best_epoch": 4,
+            "best_val_loss": 0.8773168537143974,
+            "best_val_acc": 0.6626248216833096,
+            "duration_seconds": 116.58754897117615
+        },
+        "2026": {
+            "epochs_trained": 6,
+            "best_epoch": 1,
+            "best_val_loss": 0.9537715161067783,
+            "best_val_acc": 0.6312410841654779,
+            "duration_seconds": 78.83049654960632
+        }
+    },
+    "random-full": {
+        "42": {
+            "epochs_trained": 16,
+            "best_epoch": 11,
+            "best_val_loss": 0.3581477567107123,
+            "best_val_acc": 0.8758915834522111,
+            "duration_seconds": 453.7743558883667
+        },
+        "100": {
+            "epochs_trained": 17,
+            "best_epoch": 12,
+            "best_val_loss": 0.3749504559347871,
+            "best_val_acc": 0.8751783166904422,
+            "duration_seconds": 482.6884820461273
+        },
+        "2026": {
+            "epochs_trained": 12,
+            "best_epoch": 7,
+            "best_val_loss": 0.42904018318432036,
+            "best_val_acc": 0.8380884450784594,
+            "duration_seconds": 340.783727645874
+        }
+    }
+}
