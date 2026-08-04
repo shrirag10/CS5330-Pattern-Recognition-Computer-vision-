@@ -79,7 +79,7 @@ def generate_latex_results(results_dir, report_dir):
         cm_macro = [f"\\newcommand{{\\{cond_clean}CM}}[2]{{%"]
         for r in range(len(classes)):
             for c in range(len(classes)):
-                cm_macro.append(f"  \\ifnum##1={r}\\ifnum##2={c}{cm[r][c]}\\fi\\fi%")
+                cm_macro.append(f"  \\ifnum#1={r}\\relax\\ifnum#2={c}\\relax{{{cm[r][c]}}}\\fi\\fi%")
         cm_macro.append("}")
         latex_lines.append("\n".join(cm_macro))
                 
