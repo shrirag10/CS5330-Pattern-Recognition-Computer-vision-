@@ -1,379 +1,381 @@
 """
-Generate a professional, highly detailed academic .pptx presentation.
-Matches the user's reference style:
-- Clean white backgrounds
-- Georgia Serif for headers/numbers, Calibri for body
-- Crimson/Burgundy accent color (#991B1B)
-- Slate/Charcoal text color (#1E293B)
-- Clean horizontal divider lines
-- 7 slides total (less than 8 slides)
-- Highly dense, informative, and complete content
+Revamped final-project deck: clean white theme, flowcharts, results, engaging.
+12 slides, 16:9. Georgia headers / Calibri body, crimson accent.
+Run: python3 make_pptx.py   ->  presentation.pptx
 """
-
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.oxml.ns import qn
 import os
 
-ASSETS = "/home/shrirag10/Projects/CS5330/Projects/final_project/presentation/assets"
-OUT = "/home/shrirag10/Projects/CS5330/Projects/final_project/presentation/presentation.pptx"
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "presentation.pptx")
 
-# Color Palette
-CRIMSON = RGBColor(153, 27, 27)    # Burgundy accent (#991B1B)
-SLATE_900 = RGBColor(15, 23, 42)    # Slate dark text (#0F172A)
-SLATE_700 = RGBColor(51, 65, 85)    # Body text (#334155)
-SLATE_400 = RGBColor(148, 163, 184) # Muted text (#94A3B8)
-LIGHT_GREY = RGBColor(226, 232, 240) # Divider lines (#E2E8F0)
-WHITE = RGBColor(255, 255, 255)
+# palette
+ACCENT   = RGBColor(0x99,0x1B,0x1B)
+ACCENT_D = RGBColor(0x7A,0x3A,0x3A)
+INK      = RGBColor(0x1E,0x29,0x3B)
+MUTED    = RGBColor(0x64,0x74,0x8B)
+FAINT    = RGBColor(0x94,0xA3,0xB8)
+RULE     = RGBColor(0xE5,0xE7,0xEB)
+PANEL    = RGBColor(0xF8,0xFA,0xFC)
+SOFT     = RGBColor(0xF7,0xEC,0xEC)
+SOFTLINE = RGBColor(0xE3,0xC9,0xC9)
+SLATE6   = RGBColor(0x47,0x55,0x69)
+SLATE4   = RGBColor(0x94,0xA3,0xB8)
+FROZBG   = RGBColor(0xEE,0xF2,0xF7)
+FROZLN   = RGBColor(0xD6,0xDE,0xE8)
+DARK     = RGBColor(0x0F,0x17,0x2A)
+WHITE    = RGBColor(0xFF,0xFF,0xFF)
+HOTBG    = RGBColor(0xF3,0xD9,0xD9)
 
-prs = Presentation()
-prs.slide_width  = Inches(13.333)
-prs.slide_height = Inches(7.5)
+SERIF="Georgia"; SANS="Calibri"
 
-# --- General Helpers ---
+prs=Presentation()
+prs.slide_width=Inches(13.333); prs.slide_height=Inches(7.5)
+BLANK=prs.slide_layouts[6]
 
-def set_slide_bg_white(slide):
-    bg = slide.background
-    fill = bg.fill
-    fill.solid()
-    fill.fore_color.rgb = WHITE
+def slide():
+    s=prs.slides.add_slide(BLANK)
+    s.background.fill.solid()
+    s.background.fill.fore_color.rgb=WHITE
+    return s
 
-def add_slide_header(slide, number_str, title_str):
-    txBox = slide.shapes.add_textbox(Inches(0.7), Inches(0.4), Inches(11.933), Inches(0.8))
-    tf = txBox.text_frame
-    tf.clear()
-    tf.word_wrap = True
-    tf.margin_left = tf.margin_top = tf.margin_right = tf.margin_bottom = 0
-    p = tf.paragraphs[0]
-    
-    # Add slide number in Georgia Crimson
-    run_num = p.add_run()
-    run_num.text = number_str + "    "
-    run_num.font.name = 'Georgia'
-    run_num.font.size = Pt(24)
-    run_num.font.bold = True
-    run_num.font.color.rgb = CRIMSON
-    
-    # Add title in Georgia Slate
-    run_title = p.add_run()
-    run_title.text = title_str
-    run_title.font.name = 'Georgia'
-    run_title.font.size = Pt(24)
-    run_title.font.bold = True
-    run_title.font.color.rgb = SLATE_900
-    
-    # Add thin divider line below header
-    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(1.1), Inches(11.933), Pt(1))
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = LIGHT_GREY
-    shape.line.fill.background()
+def _set_radius(shape,frac=0.09):
+    try:
+        shape.adjustments[0]=frac
+    except Exception: pass
 
-def add_slide_number(slide, num, total=7):
-    add_textbox(slide, Inches(11.633), Inches(6.8), Inches(1), Inches(0.3),
-                f"{num} / {total}", size=11, bold=False, color=SLATE_400, align=PP_ALIGN.RIGHT)
+def rect(s,l,t,w,h,fill=None,line=None,lw=1.0,rounded=False,radius=0.09,dash=None):
+    shp=s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE if rounded else MSO_SHAPE.RECTANGLE,
+                           Inches(l),Inches(t),Inches(w),Inches(h))
+    if rounded: _set_radius(shp,radius)
+    if fill is None: shp.fill.background()
+    else: shp.fill.solid(); shp.fill.fore_color.rgb=fill
+    if line is None: shp.line.fill.background()
+    else:
+        shp.line.color.rgb=line; shp.line.width=Pt(lw)
+        if dash:
+            ln=shp.line._get_or_add_ln(); d=ln.makeelement(qn('a:prstDash'),{'val':dash}); ln.append(d)
+    shp.shadow.inherit=False
+    return shp
 
-def add_textbox(slide, left, top, width, height, text, size=14, bold=False, color=SLATE_700, align=PP_ALIGN.LEFT, font_name='Calibri'):
-    txBox = slide.shapes.add_textbox(left, top, width, height)
-    tf = txBox.text_frame
-    tf.clear()
-    tf.word_wrap = True
-    tf.margin_left = tf.margin_top = tf.margin_right = tf.margin_bottom = 0
-    p = tf.paragraphs[0]
-    p.text = text
-    p.font.size = Pt(size)
-    p.font.bold = bold
-    p.font.color.rgb = color
-    p.font.name = font_name
-    p.alignment = align
-    return txBox
+def line(s,x1,y1,x2,y2,color=SLATE4,w=1.5):
+    c=s.shapes.add_connector(1,Inches(x1),Inches(y1),Inches(x2),Inches(y2))
+    c.line.color.rgb=color; c.line.width=Pt(w); c.shadow.inherit=False
+    return c
 
-def add_paragraph_to_frame(tf, text, size=14, bold=False, color=SLATE_700, space_before=Pt(8)):
-    p = tf.add_paragraph()
-    p.text = text
-    p.font.size = Pt(size)
-    p.font.bold = bold
-    p.font.color.rgb = color
-    p.font.name = 'Calibri'
-    p.space_before = space_before
-    return p
+def _run(p,txt,size,color,bold=False,italic=False,font=SANS):
+    r=p.add_run(); r.text=txt; f=r.font
+    f.size=Pt(size); f.bold=bold; f.italic=italic; f.name=font
+    f.color.rgb=color
+    return r
 
-def add_numbered_item(tf, num_str, title_str, desc_str, bold_desc=False):
-    p = tf.add_paragraph()
-    p.space_before = Pt(14)
-    p.space_after = Pt(2)
-    
-    # Number
-    run_num = p.add_run()
-    run_num.text = num_str + "    "
-    run_num.font.name = 'Georgia'
-    run_num.font.size = Pt(14)
-    run_num.font.bold = True
-    run_num.font.color.rgb = CRIMSON
-    
-    # Bold Title
-    run_title = p.add_run()
-    run_title.text = title_str
-    run_title.font.name = 'Calibri'
-    run_title.font.size = Pt(14)
-    run_title.font.bold = True
-    run_title.font.color.rgb = SLATE_900
-    
-    # Description
-    run_desc = p.add_run()
-    run_desc.text = " — " + desc_str
-    run_desc.font.name = 'Calibri'
-    run_desc.font.size = Pt(13)
-    run_desc.font.bold = bold_desc
-    run_desc.font.color.rgb = SLATE_700
+def text(s,l,t,w,h,runs,size=16,color=INK,bold=False,italic=False,font=SANS,
+         align=PP_ALIGN.LEFT,anchor=MSO_ANCHOR.TOP,line_sp=1.0,space_after=0):
+    tb=s.shapes.add_textbox(Inches(l),Inches(t),Inches(w),Inches(h)); tf=tb.text_frame
+    tf.word_wrap=True; tf.vertical_anchor=anchor
+    for m in ('margin_left','margin_right','margin_top','margin_bottom'): setattr(tf,m,0)
+    paras=runs if isinstance(runs,list) else [runs]
+    for k,para in enumerate(paras):
+        p=tf.paragraphs[0] if k==0 else tf.add_paragraph()
+        p.alignment=align; p.line_spacing=line_sp; p.space_before=0
+        if space_after: p.space_after=Pt(space_after)
+        if isinstance(para,str):
+            _run(p,para,size,color,bold,italic,font)
+        else:
+            for seg in para:
+                txt,opts=seg if isinstance(seg,tuple) else (seg,{})
+                _run(p,txt,opts.get('size',size),opts.get('color',color),
+                     opts.get('bold',bold),opts.get('italic',italic),opts.get('font',font))
+    return tb
 
-# ═══════════════════════════════════════════
-# SLIDE 1: TITLE SLIDE
-# ═══════════════════════════════════════════
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg_white(slide)
+def bullets(s,l,t,w,h,items,size=15,gap=8,color=SLATE6,bpx=ACCENT):
+    tb=s.shapes.add_textbox(Inches(l),Inches(t),Inches(w),Inches(h)); tf=tb.text_frame
+    tf.word_wrap=True
+    for m in ('margin_left','margin_right','margin_top','margin_bottom'): setattr(tf,m,0)
+    for k,it in enumerate(items):
+        p=tf.paragraphs[0] if k==0 else tf.add_paragraph()
+        p.line_spacing=1.28; p.space_after=Pt(gap); p.space_before=0
+        _run(p,"▪  ",size,bpx,bold=True)
+        if isinstance(it,str): _run(p,it,size,color)
+        else:
+            for seg in it:
+                txt,opts=seg if isinstance(seg,tuple) else (seg,{})
+                _run(p,txt,opts.get('size',size),opts.get('color',color),opts.get('bold',False),opts.get('italic',False))
+    return tb
 
-# Subtitle / Metadata
-add_textbox(slide, Inches(0.7), Inches(1.8), Inches(11.9), Inches(0.4),
-            "CS 5330 — Computer Vision — Final Project", size=13, bold=False, color=SLATE_400, font_name='Calibri')
+def kicker(s,txt):
+    text(s,0.9,0.62,10,0.35,txt.upper(),size=12.5,color=ACCENT,bold=True)
 
-# Title
-add_textbox(slide, Inches(0.7), Inches(2.2), Inches(11.9), Inches(1.4),
-            "Transfer Learning vs.\nTraining from Scratch", size=38, bold=True, color=SLATE_900, font_name='Georgia')
+def h2(s,txt,rule=True):
+    text(s,0.9,0.98,11.5,0.9,txt,size=27,color=INK,bold=True,font=SERIF,line_sp=1.05)
+    if rule: rect(s,0.92,1.92,0.62,0.045,fill=ACCENT)
 
-# Burgundy accent line below title
-shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(3.8), Inches(2.8), Pt(3))
-shape.fill.solid()
-shape.fill.fore_color.rgb = CRIMSON
-shape.line.fill.background()
+def footer(s,left,num):
+    text(s,0.9,7.02,8,0.3,left,size=10.5,color=FAINT)
+    text(s,12.0,7.0,0.9,0.3,num,size=11,color=FAINT,bold=True,align=PP_ALIGN.RIGHT)
 
-# Author & Info
-add_textbox(slide, Inches(0.7), Inches(4.2), Inches(11.9), Inches(0.4),
-            "A Capacity-Matched Empirical Evaluation using ResNet-18 on the Intel Image Dataset", size=15, bold=False, color=SLATE_700, font_name='Calibri')
+def card(s,l,t,w,h,tag,title,items,hero=False):
+    rect(s,l,t,w,h,fill=(SOFT if hero else PANEL),line=(SOFTLINE if hero else RULE),lw=1,rounded=True,radius=0.06)
+    text(s,l+0.28,t+0.24,w-0.5,0.3,tag.upper(),size=11.5,color=ACCENT,bold=True)
+    text(s,l+0.28,t+0.56,w-0.5,0.4,title,size=17,color=INK,bold=True,font=SERIF)
+    if items: bullets(s,l+0.28,t+1.06,w-0.52,h-1.2,items,size=13,gap=6)
 
-add_textbox(slide, Inches(0.7), Inches(5.2), Inches(11.9), Inches(1.2),
-            "Author: Shriman Raghav Srinivasan\nNortheastern University  ·  Khoury College of Computer Sciences\nAdvisors: CS 5330 Computer Vision Instruction Team",
-            size=13, bold=False, color=SLATE_700, font_name='Calibri')
+def callout(s,l,t,w,h,parts):
+    rect(s,l,t,w,h,fill=SOFT,line=SOFTLINE,lw=1,rounded=True,radius=0.05)
+    rect(s,l,t,0.07,h,fill=ACCENT)
+    text(s,l+0.3,t,w-0.55,h,[parts],size=14.5,color=ACCENT_D,anchor=MSO_ANCHOR.MIDDLE,line_sp=1.25)
 
-add_slide_number(slide, 1)
+def image_centered(s,path,top,width):
+    from PIL import Image
+    iw,ih=Image.open(path).size
+    h=width*ih/iw
+    left=(SW-width)/2
+    s.shapes.add_picture(path,Inches(left),Inches(top),Inches(width),Inches(h))
+    return h
 
+SW=13.333
 
-# ═══════════════════════════════════════════
-# SLIDE 2: 01 THE CORE CONFOUND & EXPERIMENTAL DESIGN
-# ═══════════════════════════════════════════
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg_white(slide)
-add_slide_header(slide, "01", "The Confound & Experimental Design")
+# ---------------- SLIDE 1 : TITLE ----------------
+def dot(s,x,y,d,color):
+    o=s.shapes.add_shape(MSO_SHAPE.OVAL,Inches(x),Inches(y),Inches(d),Inches(d))
+    o.fill.solid(); o.fill.fore_color.rgb=color; o.line.fill.background(); o.shadow.inherit=False
+    return o
+def chip(s,x,y,w,label,bg,ln,tc,dc):
+    rect(s,x,y,w,0.52,fill=bg,line=ln,lw=1.2,rounded=True,radius=0.5)
+    dot(s,x+0.22,y+0.195,0.13,dc)
+    text(s,x+0.44,y,w-0.5,0.52,label,size=12.5,color=tc,bold=True,anchor=MSO_ANCHOR.MIDDLE)
 
-# Left Column: Motivation and Mathematical formulation
-tb_left = add_textbox(slide, Inches(0.7), Inches(1.6), Inches(5.5), Inches(4.8),
-                      "Motivation & Formulation", size=15, bold=True, color=SLATE_400)
-tf_left = tb_left.text_frame
+s=slide()
+rect(s,0,0,0.16,7.5,fill=ACCENT)                     # left accent band
+text(s,1.0,1.12,10,0.35,"CS 5330 · FINAL PROJECT",size=13,color=ACCENT,bold=True)
+text(s,0.98,1.55,11.6,1.9,[
+    [("Transfer Learning vs.",{})],
+    [("Random Initialization",{'color':ACCENT})],
+],size=50,color=INK,bold=True,font=SERIF,line_sp=1.04)
+text(s,1.02,3.35,9.9,1.0,
+    "“How much of transfer learning’s advantage is the pretrained features — and how much is just fewer knobs to turn?”",
+    size=19,color=SLATE6,italic=True,font=SERIF,line_sp=1.3)
+# three-condition teaser
+chip(s,1.02,4.62,2.55,"Pretrained-Frozen",SOFT,SOFTLINE,ACCENT,ACCENT)
+chip(s,3.77,4.62,2.35,"Random-Frozen",FROZBG,FROZLN,SLATE6,SLATE4)
+chip(s,6.32,4.62,2.15,"Random-Full",FROZBG,FROZLN,SLATE6,SLATE4)
+rect(s,1.0,5.55,11.4,0.02,fill=RULE)
+meta=[("PRESENTER","Shriman Raghav Srinivasan"),("DATASET","Intel Image Classification · 6 classes"),("BACKBONE","ResNet-18")]
+mx=1.0
+for lab,val in meta:
+    text(s,mx,5.72,3.95,0.3,lab,size=11,color=FAINT,bold=True)
+    text(s,mx,6.04,3.95,0.4,val,size=14.5,color=INK,bold=True)
+    mx+=4.02
+text(s,1.0,7.02,8,0.3,"Northeastern University · Khoury College",size=11,color=FAINT)
+text(s,12.0,7.02,0.9,0.3,"01",size=11,color=FAINT,bold=True,align=PP_ALIGN.RIGHT)
 
-add_paragraph_to_frame(tf_left, "The Core Confound in Transfer Comparisons", size=14, bold=True, color=SLATE_900)
-add_paragraph_to_frame(tf_left, "Standard evaluations contrast a partially frozen, pre-trained network with a fully trained network from scratch. This confounds weight initialization quality with model trainable capacity (parameter count).", size=13, color=SLATE_700, space_before=Pt(2))
+# ---------------- SLIDE 2 : PROBLEM ----------------
+s=slide(); kicker(s,"The Problem"); h2(s,"One comparison, two hidden variables")
+bullets(s,0.9,2.35,6.0,4.2,[
+    [("The usual move: take an ",{}),("ImageNet-pretrained",{'bold':True,'color':INK}),(" network, freeze the early layers, fine-tune the rest.",{})],
+    [("It beats training from scratch — but ",{}),("why?",{'bold':True,'color':INK})],
+    [("Freezing changes ",{}),("two",{'bold':True,'color':INK}),(" things at once: the ",{}),("quality",{'bold':True,'color':INK}),(" of the frozen features and the ",{}),("number",{'bold':True,'color':INK}),(" of trainable parameters.",{})],
+    [("A naive pretrained-vs-scratch test ",{}),("confounds",{'bold':True,'color':INK}),(" them — you can’t tell which one earned the win.",{})],
+],size=16,gap=14)
+card(s,7.15,2.2,5.25,1.35,"Factor A","Feature quality",None,hero=True)
+text(s,7.43,3.02,4.7,0.5,"Pretrained weights encode edges, textures, shapes learned from a million images.",size=13,color=ACCENT_D,line_sp=1.25)
+card(s,7.15,3.7,5.25,1.35,"Factor B","Trainable capacity",None)
+text(s,7.43,4.52,4.7,0.5,"Freezing early layers also shrinks how many parameters the optimizer can move.",size=13,color=SLATE6,line_sp=1.25)
+callout(s,7.15,5.25,5.25,0.8,[("Goal:  ",{'bold':True,'color':ACCENT}),("a design that isolates Factor A from Factor B.",{})])
+footer(s,"Transfer Learning vs. Random Init","02")
 
-add_paragraph_to_frame(tf_left, "Mathematical Optimization Objective", size=14, bold=True, color=SLATE_900, space_before=Pt(14))
-add_paragraph_to_frame(tf_left, "Let the network parameters θ be split into frozen θf and trainable θt. For all conditions, we optimize θt to minimize cross-entropy loss over N samples:", size=13, color=SLATE_700, space_before=Pt(2))
-
-p_math = tf_left.add_paragraph()
-p_math.text = "   L(θt) = – (1/N) * Σ [ log p_θ(yi | xi) ]"
-p_math.font.name = 'Georgia'
-p_math.font.size = Pt(13)
-p_math.font.bold = True
-p_math.font.color.rgb = CRIMSON
-p_math.space_before = Pt(8)
-p_math.space_after = Pt(8)
-
-add_paragraph_to_frame(tf_left, "Isolating Feature Quality", size=13, bold=True, color=SLATE_900, space_before=Pt(8))
-add_paragraph_to_frame(tf_left, "We hold trainable capacity constant and vary weight initialization to measure the exact contribution of pre-training features.", size=12, color=SLATE_700, space_before=Pt(2))
-
-# Right Column: The 3 Conditions
-tb_right = add_textbox(slide, Inches(6.8), Inches(1.6), Inches(5.8), Inches(4.8),
-                       "Three Training Conditions", size=15, bold=True, color=SLATE_400)
-tf_right = tb_right.text_frame
-
-add_numbered_item(tf_right, "1", "Pretrained-Frozen (PT-F)", "Initialized with ImageNet weights. Early layers (θf) frozen; only the final residual stage (layer4) and classification head (fc) are trainable (θt).")
-add_numbered_item(tf_right, "2", "Random-Frozen (R-F)", "Early layers (θf) randomly initialized and frozen. Uses the exact same trainable capacity (θt) as PT-F. Acts as the capacity-matched control.")
-add_numbered_item(tf_right, "3", "Random-Full (R-FL)", "Fully trained from scratch. All parameters (both θf and θt) are trainable from random initialization. Serves as the classic capacity baseline.")
-
-add_slide_number(slide, 2)
-
-
-# ═══════════════════════════════════════════
-# SLIDE 3: 02 DATASET DETAILS & ARCHITECTURE PARTITIONING
-# ═══════════════════════════════════════════
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg_white(slide)
-add_slide_header(slide, "02", "Dataset & ResNet-18 Partitioning")
-
-# Left Column: Dataset & Preprocessing Details
-tb_left = add_textbox(slide, Inches(0.7), Inches(1.6), Inches(5.5), Inches(4.8),
-                      "Intel Dataset & Preprocessing", size=15, bold=True, color=SLATE_400)
-tf_left = tb_left.text_frame
-
-add_paragraph_to_frame(tf_left, "Data Distribution & Splits", size=14, bold=True, color=SLATE_900)
-add_paragraph_to_frame(tf_left, "Intel Image Classification dataset contains 150×150 px natural scene images across 6 classes: buildings, forest, glacier, mountain, sea, street. Standard training split (14,034 images) is divided into 12,631 train (90%) and 1,403 validation (10%) via class-stratified sampling. Held-out test set contains 3,000 images.", size=13, color=SLATE_700, space_before=Pt(2))
-
-add_paragraph_to_frame(tf_left, "Strict Preprocessing Pipeline", size=14, bold=True, color=SLATE_900, space_before=Pt(14))
-add_paragraph_to_frame(tf_left, "To match the model architecture requirements and maintain domain consistency:\n• Resize shorter side to 224px (bilinear interpolation)\n• Center-crop to 224 × 224 pixels\n• Per-channel ImageNet normalize: μ = [0.485, 0.456, 0.406], σ = [0.229, 0.224, 0.225]", size=13, color=SLATE_700, space_before=Pt(2))
-
-# Right Column: Architecture & BN Handling
-tb_right = add_textbox(slide, Inches(6.8), Inches(1.6), Inches(5.8), Inches(4.8),
-                       "ResNet-18 Partition Boundaries", size=15, bold=True, color=SLATE_400)
-tf_right = tb_right.text_frame
-
-add_numbered_item(tf_right, "1", "Frozen Parameters Block (θf)", "Input convolution (conv1), first batchnorm (bn1), and residual stages layer1, layer2, and layer3. Total parameter count is 2,782,784 (frozen).")
-add_numbered_item(tf_right, "2", "Trainable Parameters Block (θt)", "Final residual stage (layer4) and 6-class output fully-connected layer (fc). Total parameter count is 8,396,806 (optimized).")
-add_numbered_item(tf_right, "3", "Locked Batch Normalization Rule", "BN layers in θf are forced into eval() mode during training. This locks their running mean and variance, preventing update updates from corrupting representation statistics.")
-
-add_slide_number(slide, 3)
-
-
-# ═══════════════════════════════════════════
-# SLIDE 4: 03 PERFORMANCE EVALUATION & STATISTICS
-# ═══════════════════════════════════════════
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg_white(slide)
-add_slide_header(slide, "03", "Test Performance & Statistics")
-
-# Left Column: Accuracy Metrics
-tb_left = add_textbox(slide, Inches(0.7), Inches(1.6), Inches(5.5), Inches(4.8),
-                      "Experimental Metrics", size=15, bold=True, color=SLATE_400)
-tf_left = tb_left.text_frame
-
-add_paragraph_to_frame(tf_left, "Empirical Test Results (Mean ± Std Dev)", size=14, bold=True, color=SLATE_900)
-add_paragraph_to_frame(tf_left, "Evaluated on the held-out test split of 3,000 images across 3 random seeds (42, 100, 2026):", size=13, color=SLATE_700, space_before=Pt(2))
-
-# Table inside left column
-tbl_shape = slide.shapes.add_table(4, 3, Inches(0.7), Inches(2.7), Inches(5.5), Inches(1.4))
-tbl = tbl_shape.table
-tbl.columns[0].width = Inches(2.3)
-tbl.columns[1].width = Inches(1.6)
-tbl.columns[2].width = Inches(1.6)
-
-headers = ["Condition", "Mean Test Acc", "Std Dev"]
-for c, h in enumerate(headers):
-    cell = tbl.cell(0, c)
-    cell.text = h
-    cell.text_frame.paragraphs[0].font.size = Pt(11)
-    cell.text_frame.paragraphs[0].font.bold = True
-    cell.text_frame.paragraphs[0].font.color.rgb = SLATE_900
-
-rows_data = [
-    ["Pretrained-Frozen", "93.27%", "±0.23%"],
-    ["Random-Full", "84.69%", "±1.87%"],
-    ["Random-Frozen", "66.54%", "±4.04%"]
+# ---------------- SLIDE 3 : DESIGN FLOWCHART ----------------
+s=slide(); kicker(s,"The Design"); h2(s,"Three conditions, one controlled variable")
+conds=[
+    (2.55,"Pretrained-Frozen","θf = ImageNet weights, frozen · train θt",SOFT,SOFTLINE,ACCENT,ACCENT_D,None),
+    (3.80,"Random-Frozen","θf = random weights, frozen · train θt",FROZBG,FROZLN,SLATE6,MUTED,"CONTROL"),
+    (5.05,"Random-Full","everything random · train all layers",FROZBG,FROZLN,RGBColor(0x33,0x41,0x55),MUTED,None),
 ]
-for r, row in enumerate(rows_data):
-    for c, val in enumerate(row):
-        cell = tbl.cell(r + 1, c)
-        cell.text = val
-        cell.text_frame.paragraphs[0].font.size = Pt(11)
-        if c == 1:
-            cell.text_frame.paragraphs[0].font.bold = True
-            cell.text_frame.paragraphs[0].font.color.rgb = CRIMSON if r == 0 else SLATE_900
+bx=5.4; bw=6.6; bh=1.05
+srcx,srcy=3.1,4.325   # right-edge mid of source node
+# connectors first so boxes/node sit on top
+for ty,*_ in conds:
+    line(s,srcx,srcy,bx,ty+bh/2,color=SLATE4,w=1.6)
+rect(s,0.95,3.65,2.15,1.35,fill=DARK,line=DARK,rounded=True,radius=0.09)
+text(s,0.95,3.83,2.15,0.5,"ResNet-18",size=17,color=WHITE,bold=True,font=SERIF,align=PP_ALIGN.CENTER)
+text(s,0.95,4.33,2.15,0.6,"split into early θf + late θt",size=12,color=RGBColor(0xCB,0xD5,0xE1),align=PP_ALIGN.CENTER,line_sp=1.15)
+for ty,name,desc,bg,ln,cn,cs,badge in conds:
+    rect(s,bx,ty,bw,bh,fill=bg,line=ln,lw=1.5,rounded=True,radius=0.09)
+    nm=[(name,{'bold':True,'color':cn,'size':16,'font':SERIF})]
+    if badge: nm.append(("    "+badge,{'bold':True,'color':cn,'size':11}))
+    text(s,bx+0.3,ty+0.18,bw-0.5,0.4,[nm])
+    text(s,bx+0.3,ty+0.6,bw-0.5,0.4,desc,size=12.5,color=cs)
+rect(s,0.95,6.28,11.45,0.02,fill=RULE)
+text(s,0.95,6.42,5.6,0.5,[[("PT-F ",{'bold':True,'color':ACCENT}),("vs",{'bold':True}),(" R-F  →  isolates ",{}),("feature quality",{'bold':True,'color':INK}),(" (capacity matched)",{})]],size=13.5,color=SLATE6,line_sp=1.2)
+text(s,6.9,6.42,5.5,0.5,[[("R-F ",{'bold':True,'color':ACCENT}),("vs",{'bold':True}),(" R-FL  →  isolates ",{}),("trainable capacity",{'bold':True,'color':INK}),(" (both random)",{})]],size=13.5,color=SLATE6,line_sp=1.2)
+footer(s,"Transfer Learning vs. Random Init","03")
 
-add_paragraph_to_frame(tf_left, "Key Statistical Takeaway", size=13, bold=True, color=SLATE_900, space_before=Pt(1.2 * 72))
-add_paragraph_to_frame(tf_left, "PT-F outperforms R-F by 26.73% absolute accuracy, isolating the vast superiority of ImageNet weights under identical model capacity. PT-F also beats R-FL (fully trainable scratch baseline) by 8.58%, illustrating that pre-training functions as a stronger regularizer than network scale alone.", size=12, color=SLATE_700, space_before=Pt(2))
+# ---------------- SLIDE 4 : METHOD SPLIT ----------------
+s=slide(); kicker(s,"Method"); h2(s,"Where the network is cut",rule=False)
+text(s,0.9,1.9,11.4,0.8,[[("Freeze the generic early layers; train only the task-specific tail. PT-F and R-F share the ",{}),("exact same",{'bold':True,'color':INK}),(" trainable count — that’s what makes them a fair fight.",{})]],size=16,color=MUTED,line_sp=1.35)
+blocks=[("conv1","+bn1",True),("layer1","",True),("layer2","",True),("layer3","",True),("layer4","",False),("fc","6-class",False)]
+bx=0.9; bw=1.83; gap=0.06; by=2.95; bh=1.15
+for name,sub,frozen in blocks:
+    rect(s,bx,by,bw,bh,fill=(FROZBG if frozen else SOFT),line=(FROZLN if frozen else SOFTLINE),lw=1.5,rounded=True,radius=0.08)
+    text(s,bx,by+0.28,bw,0.4,name,size=15,color=(SLATE6 if frozen else ACCENT),bold=True,font=SERIF,align=PP_ALIGN.CENTER)
+    if sub: text(s,bx,by+0.68,bw,0.3,sub,size=11.5,color=(MUTED if frozen else ACCENT_D),align=PP_ALIGN.CENTER)
+    bx+=bw+gap
+rect(s,0.9,4.32,7.5,0.5,fill=FROZBG,line=FROZLN,lw=1,rounded=True,radius=0.12,dash="dash")
+text(s,1.1,4.32,7.2,0.5,[[("θf · frozen   ",{'bold':True,'color':SLATE6,'font':SERIF}),("2,782,784 params · BN forced to eval()",{'color':SLATE6})]],size=13,anchor=MSO_ANCHOR.MIDDLE)
+rect(s,8.52,4.32,3.88,0.5,fill=SOFT,line=SOFTLINE,lw=1,rounded=True,radius=0.15,dash="dash")
+text(s,8.72,4.32,3.6,0.5,[[("θt · trainable   ",{'bold':True,'color':ACCENT,'font':SERIF}),("8,396,806 params",{'color':ACCENT_D})]],size=13,anchor=MSO_ANCHOR.MIDDLE)
+callout(s,0.9,5.25,11.5,1.35,[
+    ("The subtle bug I avoided:  ",{'bold':True,'color':ACCENT}),
+    ("if frozen BatchNorm layers keep updating their running stats, the representation drifts and training collapses. In both frozen conditions BN stays in eval mode. In Random-Full nothing is frozen, so BN updates normally — different by design, not by accident.",{}),
+])
+footer(s,"Transfer Learning vs. Random Init","04")
 
-# Right Column: Bar Chart
-slide.shapes.add_picture(os.path.join(ASSETS, "bar.png"),
-                         Inches(6.8), Inches(1.6), Inches(5.8))
+# ---------------- SLIDE 5 : SETUP ----------------
+s=slide(); kicker(s,"Setup"); h2(s,"Same data, same recipe, three seeds")
+cw=3.68; cx=0.9; cy=2.3; ch=4.0
+card(s,cx,cy,cw,ch,"Data","Intel Scenes",[
+    "6 classes: buildings, forest, glacier, mountain, sea, street",
+    [("12,631",{'bold':True,'color':INK}),(" train / ",{}),("1,403",{'bold':True,'color':INK}),(" val / ",{}),("3,000",{'bold':True,'color':INK}),(" test (held out)",{})],
+    "Resize 224, center-crop, ImageNet normalize",
+])
+card(s,cx+cw+0.19,cy,cw,ch,"Training","Identical for all",[
+    [("SGD · lr ",{}),("1e-3",{'bold':True,'color':INK}),(" · momentum ",{}),("0.9",{'bold':True,'color':INK}),(" · wd ",{}),("1e-4",{'bold':True,'color':INK})],
+    "Batch 32 · cross-entropy on θt",
+    [("Early stop on val loss, patience ",{}),("5",{'bold':True,'color':INK})],
+])
+card(s,cx+2*(cw+0.19),cy,cw,ch,"Rigor","Reproducible",[
+    [("3 seeds: ",{}),("42, 100, 2026",{'bold':True,'color':INK})],
+    [("Test split touched ",{}),("only once",{'bold':True,'color':INK}),(", after model selection",{})],
+    "Report mean ± std, not single runs",
+])
+footer(s,"Transfer Learning vs. Random Init","05")
 
-add_slide_number(slide, 4)
+# ---------------- SLIDE 6 : RESULTS (accuracy + cost) ----------------
+s=slide(); kicker(s,"Results"); h2(s,"Pretrained wins — on accuracy and speed")
+# left: accuracy bars
+text(s,0.9,2.2,4.5,0.3,"TEST ACCURACY  ·  mean of 3 seeds",size=11,color=MUTED,bold=True)
+bars=[("PT-F",93.3,ACCENT),("R-FL",84.7,SLATE6),("R-F",66.5,SLATE4)]
+lx=0.9; lw=1.3; trackx=2.4; trackw=4.55; by=2.72; bh=0.6; vgap=0.28
+for name,val,col in bars:
+    text(s,lx,by,lw,bh,name,size=14,color=INK,bold=True,font=SERIF,align=PP_ALIGN.RIGHT,anchor=MSO_ANCHOR.MIDDLE)
+    rect(s,trackx,by,trackw,bh,fill=FROZBG,rounded=True,radius=0.3)
+    fw=trackw*val/100.0
+    rect(s,trackx,by,fw,bh,fill=col,rounded=True,radius=0.3)
+    text(s,trackx+fw-1.1,by,0.95,bh,f"{val}%",size=15,color=WHITE,bold=True,font=SERIF,align=PP_ALIGN.RIGHT,anchor=MSO_ANCHOR.MIDDLE)
+    by+=bh+vgap
+# right: convergence & cost panel
+px,py,pw,ph=7.55,2.5,4.85,2.32
+rect(s,px,py,pw,ph,fill=PANEL,line=RULE,lw=1,rounded=True,radius=0.05)
+text(s,px+0.32,py+0.24,pw-0.6,0.3,"CONVERGENCE & COST",size=11,color=ACCENT,bold=True)
+rows=[("Pretrained-Frozen","8.0 epochs · ~103s",ACCENT),
+      ("Random-Frozen","8.7 epochs · ~113s",SLATE6),
+      ("Random-Full","15.0 epochs · ~426s",SLATE6)]
+ry=py+0.66
+for nm,val,col in rows:
+    text(s,px+0.32,ry,2.4,0.3,nm,size=13,color=INK,bold=True)
+    text(s,px+2.55,ry,pw-2.85,0.3,val,size=13,color=col,align=PP_ALIGN.RIGHT)
+    ry+=0.42
+text(s,px+0.32,ry+0.04,pw-0.6,0.3,[[("Training from scratch pays ",{'color':MUTED}),("~4× the wall-clock.",{'bold':True,'color':INK})]],size=12.5)
+# bottom callout
+callout(s,0.9,5.4,11.5,1.15,[
+    ("Capacity-matched gap: +26.7 points.  ",{'bold':True,'color':ACCENT}),
+    ("PT-F vs R-F — identical trainable parameters and recipe, the only difference is pretrained vs random frozen features. That gap is pretraining, cleanly isolated. Unfreezing everything (R-FL) recovers accuracy but never reaches the pretrained ceiling.",{}),
+])
+footer(s,"Mean test accuracy over 3 seeds · std ≤ 4%","06")
 
+IMGDIR=os.path.join(os.path.dirname(os.path.abspath(__file__)),"..","results")
 
-# ═══════════════════════════════════════════
-# SLIDE 5: 04 TRAINING CURVES & OPTIMIZATION PARAMETERS
-# ═══════════════════════════════════════════
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg_white(slide)
-add_slide_header(slide, "04", "Training Dynamics & Optimization")
+# ---------------- SLIDE 7 : TRAINING DYNAMICS ----------------
+s=slide(); kicker(s,"Results"); h2(s,"Pretrained converges instantly; scratch crawls",rule=False)
+text(s,0.9,1.82,11.5,0.55,"Pretrained-frozen starts near its ceiling and flatlines in ~4 epochs; random-full climbs for 12–17 epochs; random-frozen is noisy and low.",size=14.5,color=MUTED,line_sp=1.3)
+image_centered(s,os.path.join(IMGDIR,"learning_curves.png"),top=2.55,width=11.3)
+footer(s,"Per-epoch validation metrics · 3 seeds","07")
 
-# Left Column: Curves
-slide.shapes.add_picture(os.path.join(ASSETS, "curves.png"),
-                         Inches(0.7), Inches(1.6), Inches(6.8))
+# ---------------- SLIDE 8 : FEATURE SPACE ----------------
+s=slide(); kicker(s,"Why It Works"); h2(s,"Pretrained features are already separable",rule=False)
+text(s,0.9,1.82,11.5,0.55,"PCA of the 512-d penultimate features: pretrained-frozen splits the classes (overlaps match the confusion matrix); random-frozen stays entangled.",size=14.5,color=MUTED,line_sp=1.3)
+image_centered(s,os.path.join(IMGDIR,"feature_pca.png"),top=2.5,width=9.9)
+footer(s,"Test split · seed 42","08")
 
-# Right Column: Convergence analysis
-tb_right = add_textbox(slide, Inches(8.0), Inches(1.6), Inches(4.6), Inches(4.8),
-                       "Optimization & Speed", size=15, bold=True, color=SLATE_400)
-tf_right = tb_right.text_frame
+# ---------------- SLIDE 9 : ABLATION ----------------
+s=slide(); kicker(s,"Ablation"); h2(s,"How much fine-tuning do you actually need?",rule=False)
+from PIL import Image as _Img
+_ab=os.path.join(IMGDIR,"ablation_curve.png"); _iw,_ih=_Img.open(_ab).size
+_w=7.2; _h=_w*_ih/_iw
+s.shapes.add_picture(_ab,Inches(0.7),Inches(2.55),Inches(_w),Inches(_h))
+bullets(s,8.25,2.55,4.15,4.0,[
+    [("A bare linear probe already hits ",{}),("91.3%",{'bold':True,'color':ACCENT}),(" — frozen ImageNet features are nearly linearly separable.",{})],
+    [("Unfreezing ",{}),("layer4",{'bold':True,'color':INK}),(" adds ~1.6 pts: the boundary used in the main experiments.",{})],
+    [("layer3, layer2, full fine-tune: ",{}),("flat at 92.8%",{'bold':True,'color':INK}),(" — 3.6× the params, no gain.",{})],
+    [("Most of pretraining’s value needs ",{}),("almost no fine-tuning",{'bold':True,'color':INK}),(".",{})],
+],size=14,gap=14)
+footer(s,"Pretrained ResNet-18 · 40% train subset · seed 42","09")
 
-add_paragraph_to_frame(tf_right, "Training Hyperparameters", size=13, bold=True, color=SLATE_900)
-add_paragraph_to_frame(tf_right, "• Optimizer: SGD with momentum = 0.9\n• Weight Decay: 1 × 10⁻⁴ | Learning Rate: 1 × 10⁻³\n• Batch Size: 32 | Validation patience = 5 epochs", size=12, color=SLATE_700, space_before=Pt(2))
+# ---------------- SLIDE 10 : GABOR FIRST LAYER ----------------
+s=slide(); kicker(s,"Extension"); h2(s,"How far up does the first layer reach?",rule=False)
+_gb=os.path.join(IMGDIR,"gabor_curve.png"); _giw,_gih=_Img.open(_gb).size
+_gw=7.4; _gh=_gw*_gih/_giw
+s.shapes.add_picture(_gb,Inches(0.55),Inches(2.75),Inches(_gw),Inches(_gh))
+bullets(s,8.15,2.7,4.25,4.0,[
+    [("Swap ",{}),("conv1",{'bold':True,'color':INK}),(" for a fixed ",{}),("Gabor bank",{'bold':True,'color':INK}),(" (8 orientations × 4 freqs × 2 phases), freeze it, then unfreeze deeper stages one at a time.",{})],
+    [("Gabor read-out: ",{}),("81.1%",{'bold':True,'color':ACCENT}),(" — about 10 pts below the learned first layer.",{})],
+    [("Unfreezing just ",{}),("layer1",{'bold':True,'color':INK}),(" recovers ",{}),("+5 pts to 86.1%",{'bold':True,'color':INK}),("; layer2–4 add almost nothing.",{})],
+    [("First-layer influence reaches ",{}),("~one stage up",{'bold':True,'color':ACCENT}),(". A ~7-pt gap to learned features never closes, even fully trainable.",{})],
+],size=13.5,gap=13)
+footer(s,"Gabor vs. learned conv1 · full data · seed 42","10")
 
-add_paragraph_to_frame(tf_right, "Convergence Epochs & Compute Duration", size=13, bold=True, color=SLATE_900, space_before=Pt(12))
-add_paragraph_to_frame(tf_right, "• PT-Frozen: Converges in 8.0 epochs mean (102.5s duration). Starts immediately at high val accuracy (>90% in epoch 1).\n• Random-Frozen: Converges in 8.7 epochs mean (112.8s duration) but plateaus at low validation accuracy (67.8%).\n• Random-Full: Requires 15.0 epochs mean (425.7s duration). Needs nearly twice as many epochs and 4× more compute time.", size=12, color=SLATE_700, space_before=Pt(2))
+# ---------------- SLIDE 11 : CONFUSION ----------------
+s=slide(); kicker(s,"Error Analysis"); h2(s,"The mistakes are the dataset’s, not the method’s")
+labels=["B","F","G","M","Se","St"]
+cm=[[408,0,0,0,1,28],[0,471,0,1,0,2],[1,4,458,71,16,3],[1,2,28,484,9,1],[2,0,2,3,503,0],[26,0,0,2,0,473]]
+hot={(0,5),(2,3),(5,0)}
+gx=1.0; gy=2.75; cell=0.52; hdr=0.42
+text(s,gx,gy-0.42,5,0.3,"Pretrained-Frozen · test confusion (seed 100)",size=13,color=INK,bold=True,font=SERIF)
+for j,lb in enumerate(labels):
+    text(s,gx+hdr+j*cell,gy-0.02,cell,0.3,lb,size=11,color=MUTED,bold=True,align=PP_ALIGN.CENTER)
+for i,row in enumerate(cm):
+    ry=gy+hdr+i*cell
+    text(s,gx-0.05,ry,hdr,cell,labels[i],size=11,color=MUTED,bold=True,align=PP_ALIGN.CENTER,anchor=MSO_ANCHOR.MIDDLE)
+    for j,v in enumerate(row):
+        cxp=gx+hdr+j*cell
+        if i==j:
+            rect(s,cxp,ry,cell,cell,fill=ACCENT,line=WHITE,lw=1)
+            text(s,cxp,ry,cell,cell,str(v),size=11,color=WHITE,bold=True,align=PP_ALIGN.CENTER,anchor=MSO_ANCHOR.MIDDLE)
+        elif (i,j) in hot:
+            rect(s,cxp,ry,cell,cell,fill=HOTBG,line=WHITE,lw=1)
+            text(s,cxp,ry,cell,cell,str(v),size=11,color=ACCENT,bold=True,align=PP_ALIGN.CENTER,anchor=MSO_ANCHOR.MIDDLE)
+        else:
+            rect(s,cxp,ry,cell,cell,fill=WHITE,line=FROZBG,lw=1)
+            text(s,cxp,ry,cell,cell,str(v),size=10.5,color=FAINT,align=PP_ALIGN.CENTER,anchor=MSO_ANCHOR.MIDDLE)
+bullets(s,7.5,2.95,4.9,3.6,[
+    [("Glacier ↔ Mountain",{'bold':True,'color':INK}),(" (71 errors): shared snow, ridges, rock texture — genuinely ambiguous.",{})],
+    [("Buildings ↔ Street",{'bold':True,'color':INK}),(" (26–28): streets contain buildings and vice-versa.",{})],
+    [("The ",{}),("same",{'bold':True,'color':INK}),(" confusions appear in all three conditions — just far larger for random init.",{})],
+    [("Errors track ",{}),("visual overlap in the data",{'bold':True,'color':INK}),(", not a broken training setup.",{})],
+],size=15,gap=13)
+footer(s,"B buildings · F forest · G glacier · M mountain · Se sea · St street","11")
 
-add_paragraph_to_frame(tf_right, "Early Stopping Behavior", size=13, bold=True, color=SLATE_900, space_before=Pt(12))
-add_paragraph_to_frame(tf_right, "Early stopping on validation loss successfully prevents overfitting. R-FL continues to improve steadily but exhibits high seed variance, whereas PT-F converges to a flat validation trajectory immediately.", size=12, color=SLATE_700, space_before=Pt(2))
+# ---------------- SLIDE 12 : TAKEAWAYS ----------------
+s=slide(); kicker(s,"Conclusion"); h2(s,"What the control actually proved")
+takes=[
+    ("01","Pretraining is the feature quality, not the parameter count",
+     [("Capacity-matched, pretrained features add ",{}),("+26.7 points",{'bold':True,'color':ACCENT}),(" over random frozen features. The win is the representations themselves.",{})]),
+    ("02","Capacity helps, but can’t close the gap",
+     [("Unfreezing everything (Random-Full) recovers to 84.7% — better than random-frozen, yet still ~9 points short of pretraining, at ~4× the compute.",{})]),
+    ("03","For small data + tight budgets, transfer learning wins outright",
+     [("Best accuracy and fastest convergence. The random-frozen control is what lets me say that with confidence.",{})]),
+]
+ty=2.4
+for num,title,body in takes:
+    text(s,0.9,ty,0.9,0.8,num,size=30,color=SOFTLINE,bold=True,font=SERIF)
+    text(s,1.85,ty,10.5,0.4,title,size=19,color=INK,bold=True,font=SERIF)
+    text(s,1.85,ty+0.48,10.5,0.7,[body],size=14.5,color=SLATE6,line_sp=1.3)
+    ty+=1.45
+footer(s,"Thank you · Questions welcome","12")
 
-add_slide_number(slide, 5)
-
-
-# ═══════════════════════════════════════════
-# SLIDE 6: 05 CLASS CONFUSIONS & F1 ANALYSIS
-# ═══════════════════════════════════════════
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg_white(slide)
-add_slide_header(slide, "05", "Confusion & Class F1 Analysis")
-
-# Left Column: Confusion Matrices
-slide.shapes.add_picture(os.path.join(ASSETS, "confusion.png"),
-                         Inches(0.7), Inches(1.6), Inches(6.8))
-
-# Right Column: Detailed Observations
-tb_right = add_textbox(slide, Inches(8.0), Inches(1.6), Inches(4.6), Inches(4.8),
-                       "Per-class Findings", size=15, bold=True, color=SLATE_400)
-tf_right = tb_right.text_frame
-
-add_paragraph_to_frame(tf_right, "Glacier vs. Mountain Confusion", size=13, bold=True, color=SLATE_900)
-add_paragraph_to_frame(tf_right, "Glaciers and mountains exhibit high visual similarity (white snow, jagged grey rock textures), causing major mutual confusion across all conditions. Representative PT-F seed misclassifies 41 mountain images as glacier and 55 glacier images as mountain.", size=12, color=SLATE_700, space_before=Pt(2))
-
-add_paragraph_to_frame(tf_right, "Buildings vs. Street Confusion", size=13, bold=True, color=SLATE_900, space_before=Pt(12))
-add_paragraph_to_frame(tf_right, "Urban images frequently co-occur (streets contain buildings in the background), leading to high confusion rates (29 street images classified as buildings).", size=12, color=SLATE_700, space_before=Pt(2))
-
-add_paragraph_to_frame(tf_right, "Strongest Categories", size=13, bold=True, color=SLATE_900, space_before=Pt(12))
-add_paragraph_to_frame(tf_right, "Forest has the highest F1 score (PT-F: 99.8%) due to distinct green hue and texture patterns. Sea achieves excellent F1 (96.5%).", size=12, color=SLATE_700, space_before=Pt(2))
-
-add_paragraph_to_frame(tf_right, "Scratch training F1 drop", size=13, bold=True, color=SLATE_900, space_before=Pt(12))
-add_paragraph_to_frame(tf_right, "R-FL achieves lower F1 scores across the board (Forest: 94.8%, Glacier: 73.5%, Mountain: 78.3%), proving that scratch features struggle with subtle boundary details.", size=12, color=SLATE_700, space_before=Pt(2))
-
-add_slide_number(slide, 6)
-
-
-# ═══════════════════════════════════════════
-# SLIDE 7: 06 SCIENTIFIC CONCLUSIONS & DISCUSSION
-# ═══════════════════════════════════════════
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg_white(slide)
-add_slide_header(slide, "06", "Discussion & Conclusions")
-
-# Left Column: Key Findings
-tb_left = add_textbox(slide, Inches(0.7), Inches(1.6), Inches(5.5), Inches(4.8),
-                      "Scientific Discussion", size=15, bold=True, color=SLATE_400)
-tf_left = tb_left.text_frame
-
-add_paragraph_to_frame(tf_left, "Pretraining Quality vs. Trainable Capacity", size=14, bold=True, color=SLATE_900)
-add_paragraph_to_frame(tf_left, "The capacity control (R-F) establishes that freezing early layers restricts trainable capacity, leading to poor scratch performance (+26.73% accuracy gap). In contrast, pre-trained weights (PT-F) furnish structured, highly generalizable features (edges, textures, shapes) that adapt seamlessly.", size=13, color=SLATE_700, space_before=Pt(2))
-
-add_paragraph_to_frame(tf_left, "Revisiting Literature (He et al. 2019)", size=14, bold=True, color=SLATE_900, space_before=Pt(14))
-add_paragraph_to_frame(tf_left, "He et al. showed that training from scratch can match pre-training with enough time and data. Our results confirm that under a tight training patience budget and modest target data size, transfer learning is highly essential, outperforming scratch by 8.58% in 4× less time.", size=13, color=SLATE_700, space_before=Pt(2))
-
-# Right Column: Future Directions
-tb_right = add_textbox(slide, Inches(6.8), Inches(1.6), Inches(5.8), Inches(4.8),
-                       "Future Work & Summary", size=15, bold=True, color=SLATE_400)
-tf_right = tb_right.text_frame
-
-add_numbered_item(tf_right, "1", "Vary the frozen boundary", "Test fine-tuning with fewer/more frozen layers (e.g. freeze layer1-2) to investigate where task-specific representations begin.", bold_desc=False)
-add_numbered_item(tf_right, "2", "Evaluate larger backbones", "Extend this capacity-matched analysis to deeper models (ResNet-50) or non-convolutional backbones (Vision Transformers).", bold_desc=False)
-add_numbered_item(tf_right, "3", "Progressive unfreezing", "Apply learning rate warmup and gradually unlock layers from back to front during training to avoid representation collapse.", bold_desc=False)
-add_numbered_item(tf_right, "4", "Advanced augmentations", "Examine if severe augmentations (MixUp, RandAugment) can help scratch models (R-FL) close the generalization gap.", bold_desc=False)
-
-add_slide_number(slide, 7)
-
-# Save
 prs.save(OUT)
-print(f"✅ Generated minimal professional presentation matching reference style at: {OUT}")
+print("saved",OUT)
