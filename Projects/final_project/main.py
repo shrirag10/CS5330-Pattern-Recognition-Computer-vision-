@@ -1,5 +1,6 @@
 import os
 import argparse
+import shutil
 import subprocess
 from src.run_experiments import run_all_experiments
 from src.evaluate import evaluate_all_models
@@ -8,11 +9,12 @@ from src.generate_latex_results import generate_latex_results
 
 def compile_latex(report_dir, presentation_dir):
     """
-    Compiles report.tex and presentation.tex using pdflatex and bibtex.
+    Compiles report.tex using pdflatex and bibtex, then builds the slide deck
+    with python-pptx and converts it to PDF via LibreOffice.
     Runs commands within their respective directories to ensure paths are correct.
     """
     print("\n" + "="*60)
-    print("COMPILING LATEX REPORT AND PRESENTATION")
+    print("COMPILING REPORT AND PRESENTATION")
     print("="*60)
     
     # 1. Compile Report
@@ -41,22 +43,32 @@ def compile_latex(report_dir, presentation_dir):
     except subprocess.CalledProcessError as e:
         print(f"   Error compiling report.tex: {e}")
         
-    # 2. Compile Presentation Slides
-    print("\n2. Compiling presentation/presentation.tex...")
+    # 2. Build Presentation Slides
+    print("\n2. Building presentation/presentation.pptx...")
     try:
-        # Run pdflatex twice for Beamer slides
         subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", "presentation.tex"],
+            ["python3", "make_pptx.py"],
             cwd=presentation_dir, check=True, stdout=subprocess.DEVNULL
         )
-        subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", "presentation.tex"],
-            cwd=presentation_dir, check=True, stdout=subprocess.DEVNULL
-        )
-        print("   Presentation compiled successfully! Output: presentation/presentation.pdf")
+        print("   Slides built successfully! Output: presentation/presentation.pptx")
     except subprocess.CalledProcessError as e:
-        print(f"   Error compiling presentation.tex: {e}")
-        
+        print(f"   Error building presentation.pptx: {e}")
+        return
+
+    # 3. Convert the deck to PDF (LibreOffice headless; skipped if unavailable)
+    print("\n3. Converting presentation.pptx to PDF...")
+    if shutil.which("soffice") is None:
+        print("   Skipped: LibreOffice (soffice) not found on PATH.")
+    else:
+        try:
+            subprocess.run(
+                ["soffice", "--headless", "--convert-to", "pdf", "presentation.pptx"],
+                cwd=presentation_dir, check=True, stdout=subprocess.DEVNULL
+            )
+            print("   Converted successfully! Output: presentation/presentation.pdf")
+        except subprocess.CalledProcessError as e:
+            print(f"   Error converting presentation.pptx: {e}")
+
     print("="*60 + "\n")
 
 def main():
