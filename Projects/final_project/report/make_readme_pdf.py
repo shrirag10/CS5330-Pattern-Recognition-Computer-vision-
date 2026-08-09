@@ -17,6 +17,9 @@ SRC = os.path.join(ROOT, "README.md")
 OUTDIR = os.path.join(ROOT, "report")
 STEM = "README"
 
+# sections that should start on a fresh page
+PAGEBREAK_BEFORE = {"Repository Contents"}
+
 PREAMBLE = r"""\documentclass[10pt,a4paper]{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -187,8 +190,11 @@ def convert(md):
             if lvl == 1:
                 out.append(r"\begin{center}{\LARGE\bfseries\color{ink} " + txt + r"}\end{center}")
             elif lvl == 2:
-                # keep a section heading from stranding itself at the foot of a page
-                out.append(r"\needspace{5\baselineskip}")
+                if m.group(2).strip() in PAGEBREAK_BEFORE:
+                    out.append(r"\clearpage")
+                else:
+                    # keep a heading from stranding itself at the foot of a page
+                    out.append(r"\needspace{5\baselineskip}")
                 out.append(r"\section*{" + txt + "}")
             else:
                 out.append(r"\subsection*{" + txt + "}")
