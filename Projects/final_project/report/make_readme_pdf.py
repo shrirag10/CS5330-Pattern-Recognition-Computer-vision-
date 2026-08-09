@@ -84,6 +84,10 @@ def inline(text):
 
     text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", link, text)
 
+    # bare URLs on their own: typeset with \url so they stay clickable and can break
+    text = re.sub(r"https?://[^\s)\]]+",
+                  lambda m: stash(r"\url{" + m.group(0).replace("%", r"\%") + "}"), text)
+
     text = esc(text)
     text = re.sub(r"\*\*([^*]+)\*\*", r"\\textbf{\1}", text)
     text = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"\\emph{\1}", text)
