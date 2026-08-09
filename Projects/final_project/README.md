@@ -11,6 +11,10 @@ Isolating feature quality from trainable capacity in scene classification.
 * Khoury College of Computer Sciences, Northeastern University
 * CS 5330 Pattern Recognition and Computer Vision, Summer 2026, Prof. Bruce Maxwell
 
+**Repository:** https://github.com/shrirag10/CS5330-Pattern-Recognition-Computer-vision-
+
+This project lives under [`Projects/final_project/`](https://github.com/shrirag10/CS5330-Pattern-Recognition-Computer-vision-/tree/main/Projects/final_project).
+
 ---
 
 ## Demo Video and Presentation
