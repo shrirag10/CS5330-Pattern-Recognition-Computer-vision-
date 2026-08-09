@@ -31,6 +31,7 @@ PREAMBLE = r"""\documentclass[10pt,a4paper]{article}
 \usepackage{fancyvrb}
 \usepackage[hidelinks,breaklinks=true]{hyperref}
 \usepackage{titlesec}
+\usepackage{needspace}
 
 \definecolor{accent}{HTML}{991B1B}
 \definecolor{ink}{HTML}{1E293B}
@@ -47,7 +48,12 @@ PREAMBLE = r"""\documentclass[10pt,a4paper]{article}
 \setlength{\parskip}{0.5em}
 \renewcommand{\arraystretch}{1.25}
 
-\DefineVerbatimEnvironment{code}{Verbatim}{fontsize=\small,xleftmargin=1em,frame=leftline,framerule=1.2pt,rulecolor=\color{accent!35},formatcom=\color{ink}}
+% \footnotesize keeps the widest code line (85 chars, in the tree) inside the margin
+\DefineVerbatimEnvironment{code}{Verbatim}{fontsize=\footnotesize,xleftmargin=1em,frame=leftline,framerule=1.2pt,rulecolor=\color{accent!35},formatcom=\color{ink}}
+
+% long unbreakable \texttt runs (paths, filenames) otherwise punch past the margin
+\sloppy
+\emergencystretch=3em
 
 \begin{document}
 """
@@ -73,7 +79,12 @@ def inline(text):
 
     # protect inline math first, then code, so $ inside code is untouched
     text = re.sub(r"\$([^$]+)\$", lambda m: stash(f"${m.group(1)}$"), text)
-    text = re.sub(r"`([^`]+)`", lambda m: stash(r"\texttt{" + esc(m.group(1)) + "}"), text)
+    def brk(s):
+        # \texttt is unbreakable, so long paths punch out of narrow table cells.
+        # Offer zero-width break points after path separators and underscores.
+        return s.replace("/", "/\\allowbreak{}").replace(r"\_", r"\_\allowbreak{}")
+
+    text = re.sub(r"`([^`]+)`", lambda m: stash(r"\texttt{" + brk(esc(m.group(1))) + "}"), text)
 
     # links before escaping, so the URL survives intact
     def link(m):
@@ -104,11 +115,16 @@ def table(rows):
     header, body = rows[0], rows[2:]
     n = len(header)
     if n == 2:
-        widths = [0.30, 0.64]
+        widths = [0.34, 0.66]
     else:
-        first = 0.30 if n <= 4 else 0.22
-        widths = [first] + [(0.94 - first) / (n - 1)] * (n - 1)
-    spec = "".join(f"p{{{w:.3f}\\linewidth}}" for w in widths)
+        first = 0.31 if n <= 4 else 0.24
+        widths = [first] + [(1.0 - first) / (n - 1)] * (n - 1)
+    # Fractions sum to 1, so each column must give back its own 2\tabcolsep or the
+    # table runs past \linewidth by 2(n-1)\tabcolsep. raggedright as well, since
+    # justifying a narrow cell stretches interword space badly around monospace.
+    spec = "".join(
+        r">{\raggedright\arraybackslash}p{\dimexpr " + f"{w:.4f}" + r"\linewidth-2\tabcolsep\relax}"
+        for w in widths)
     out = [r"\begin{center}\small", r"\begin{longtable}{@{}" + spec + r"@{}}", r"\toprule"]
     out.append(" & ".join(r"\textbf{" + inline(c) + "}" for c in header) + r" \\")
     out += [r"\midrule", r"\endhead"]
@@ -141,6 +157,10 @@ def convert(md):
                 buf.append(lines[i])
                 i += 1
             i += 1
+            # pdflatex with T1 has no glyphs for the box-drawing characters, and
+            # silently drops them, which destroys the directory tree. Use ASCII.
+            box = str.maketrans({"├": "|", "└": "`", "─": "-", "│": "|"})
+            buf = [b.translate(box) for b in buf]
             out += [r"\begin{code}"] + buf + [r"\end{code}"]
             continue
 
@@ -167,6 +187,8 @@ def convert(md):
             if lvl == 1:
                 out.append(r"\begin{center}{\LARGE\bfseries\color{ink} " + txt + r"}\end{center}")
             elif lvl == 2:
+                # keep a section heading from stranding itself at the foot of a page
+                out.append(r"\needspace{5\baselineskip}")
                 out.append(r"\section*{" + txt + "}")
             else:
                 out.append(r"\subsection*{" + txt + "}")

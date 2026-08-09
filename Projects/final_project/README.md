@@ -78,17 +78,35 @@ Random-Frozen is the whole point. It trains the exact same 8,396,806 parameters 
 
 ## Repository Contents
 
-| Item | Path |
+**Graded deliverables**
+
+| What | Where |
 |---|---|
-| Report, 7 pages, IEEE conference format | [`report/report.pdf`](report/report.pdf), source [`report/report.tex`](report/report.tex) |
+| Report, 7 pages, IEEE format | [`report/report.pdf`](report/report.pdf) |
 | This README as a PDF | [`report/README.pdf`](report/README.pdf) |
 | Presented slide deck | [`presentation/Final_Presentation-PRCV.pdf`](presentation/Final_Presentation-PRCV.pdf) |
 | Demo video | [`presentation/demo_video.mp4`](presentation/demo_video.mp4) |
-| Trained checkpoints | `results/best_model_{condition}_seed{seed}.pth` |
-| Metrics | `results/summary_metrics.json`, `results/test_evaluation_metrics.json`, `results/ablation/*.json` |
-| Figures | `results/loss_curves.png`, `accuracy_curves.png`, `confusion_matrices.png`, `learning_curves.png`, `feature_pca.png`, `ablation_curve.png`, `gabor_curve.png` |
+
+**Experiment outputs**
+
+| What | Where |
+|---|---|
+| Trained checkpoints, 9 runs | `results/best_model_{condition}_seed{seed}.pth` |
+| Main metrics | `results/summary_metrics.json`, `results/test_evaluation_metrics.json` |
+| Ablation metrics | `results/ablation/ablation_results.json`, `gabor_ablation_results.json` |
+| Per-run training curves | `results/history_{condition}_seed{seed}.json` |
+
+Seven figures, all under `results/`:
+
+```
+loss_curves.png       accuracy_curves.png    confusion_matrices.png
+learning_curves.png   feature_pca.png        ablation_curve.png
+gabor_curve.png
+```
 
 **About the dataset.** Intel Image Classification: 150x150 natural scene images across six classes (buildings, forest, glacier, mountain, sea, street), 14,034 training and 3,000 test images. An unlabeled `seg_pred/` split ships with it but I do not use it here.
+
+**Layout**
 
 ```
 final_project/
