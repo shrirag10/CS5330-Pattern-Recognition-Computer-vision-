@@ -36,17 +36,21 @@ def generate_latex_results(results_dir, report_dir):
         # --- 1. Validation Statistics ---
         epochs_list = []
         val_acc_list = []
+        duration_list = []
         for seed, metrics in summary_data[cond].items():
             epochs_list.append(metrics['epochs_trained'])
             val_acc_list.append(metrics['best_val_acc'])
-            
+            duration_list.append(metrics['duration_seconds'])
+
         mean_val_epochs = np.mean(epochs_list)
         std_val_epochs = np.std(epochs_list)
         mean_val_acc = np.mean(val_acc_list) * 100
         std_val_acc = np.std(val_acc_list) * 100
-        
+        mean_duration = np.mean(duration_list)
+
         latex_lines.append(f"\\newcommand{{\\{cond_clean}ValEpochsMean}}{{{mean_val_epochs:.1f}}}")
         latex_lines.append(f"\\newcommand{{\\{cond_clean}ValEpochsStd}}{{{std_val_epochs:.1f}}}")
+        latex_lines.append(f"\\newcommand{{\\{cond_clean}TrainSecondsMean}}{{{mean_duration:.0f}}}")
         latex_lines.append(f"\\newcommand{{\\{cond_clean}ValAccMean}}{{{mean_val_acc:.2f}\\%}}")
         latex_lines.append(f"\\newcommand{{\\{cond_clean}ValAccStd}}{{{std_val_acc:.2f}\\%}}")
         

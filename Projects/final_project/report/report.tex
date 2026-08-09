@@ -6,6 +6,7 @@
 \usepackage{xcolor}
 \usepackage{url}
 \usepackage{booktabs}
+\usepackage[hidelinks,breaklinks=true]{hyperref}
 
 % Input the automated results summary macros
 \input{results_summary.tex}
@@ -17,13 +18,13 @@
 \author{
 \IEEEauthorblockN{Shriman Raghav Srinivasan}
 \IEEEauthorblockA{Khoury College of Computer Sciences, Northeastern University, Boston, MA \\
-Email: srinivasan.shri@northeastern.edu}
+Email: srinivasan.shrim@northeastern.edu}
 }
 
 \maketitle
 
 \begin{abstract}
-This paper presents a controlled, empirical comparison of transfer learning and training from scratch using the ResNet-18 architecture on the six-class Intel Image Classification dataset. To isolate the effects of feature pretraining quality from those of trainable capacity, I define a capacity-matched design featuring three training conditions: (i) \textit{pretrained-frozen}, where ImageNet-pretrained weights are loaded and early layers are frozen; (ii) \textit{random-frozen}, where early layers are randomly initialized and frozen as a capacity-matched control; and (iii) \textit{random-full}, where the entire network is trained from scratch. In all frozen conditions, batch normalization layers in the frozen block are kept in evaluation mode to prevent representation drift. The models are trained with validation-based early stopping across three distinct random seeds. Evaluation on the held-out test split demonstrates that the \textit{pretrained-frozen} model achieves a mean test accuracy of \pretrainedfrozenTestAccMean, significantly outperforming the \textit{random-frozen} (\randomfrozenTestAccMean) and \textit{random-full} (\randomfullTestAccMean) configurations. The results isolate a substantial accuracy benefit ($>50\%$) directly attributable to the quality of pretrained features under matched capacities. A freeze-depth ablation further shows that a linear probe on the frozen pretrained features already attains most of this accuracy, which shows how much pretraining matters when data and compute are limited.
+This paper presents a controlled, empirical comparison of transfer learning and training from scratch using the ResNet-18 architecture on the six-class Intel Image Classification dataset. To isolate the effects of feature pretraining quality from those of trainable capacity, I define a capacity-matched design featuring three training conditions: (i) \textit{pretrained-frozen}, where ImageNet-pretrained weights are loaded and early layers are frozen; (ii) \textit{random-frozen}, where early layers are randomly initialized and frozen as a capacity-matched control; and (iii) \textit{random-full}, where the entire network is trained from scratch. In all frozen conditions, batch normalization layers in the frozen block are kept in evaluation mode to prevent representation drift. The models are trained with validation-based early stopping across three distinct random seeds. Evaluation on the held-out test split demonstrates that the \textit{pretrained-frozen} model achieves a mean test accuracy of \pretrainedfrozenTestAccMean, significantly outperforming the \textit{random-frozen} (\randomfrozenTestAccMean) and \textit{random-full} (\randomfullTestAccMean) configurations. The results isolate a benefit of 26.7 accuracy points directly attributable to the quality of pretrained features under matched capacities, against 18.1 points attributable to trainable capacity alone. A freeze-depth ablation further shows that a linear probe on the frozen pretrained features already attains most of this accuracy, which shows how much pretraining matters when data and compute are limited.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -52,6 +53,8 @@ He et al.~\cite{he2016deep} introduced the Deep Residual Learning framework (Res
 Yosinski et al.~\cite{yosinski2014transferable} investigated the transferability of features in deep neural networks. They proved that first-layer features are general-purpose (e.g., edge and color detectors) regardless of the dataset, while final-layer features are task-specific. Crucially, they observed that freezing early layers maintains general features, but splitting a network mid-way can cause optimization difficulties due to co-adaptation of features in adjacent layers. This motivates my partition boundary, where only the final stage (\texttt{layer4}) and head are trainable.
 
 He et al.~\cite{he2019rethinking} challenged the necessity of ImageNet pre-training for target tasks in their seminal paper "Rethinking ImageNet Pre-training". They demonstrated that models trained from scratch (random initialization) can match or even exceed the accuracy of pre-trained models on target tasks such as COCO object detection, provided they are trained for long enough. They concluded that pre-training primarily speeds up convergence rather than improving generalization limits when data is sufficient. My work explores whether these findings hold for scene classification under small data and tight training patience budgets.
+
+Raghu et al.~\cite{raghu2019transfusion} pushed the point further in the medical imaging domain, showing that much of the apparent benefit of ImageNet pretraining there is attributable to model size rather than to genuinely reused features. That is precisely the confound this paper is built to resolve: if the advantage is over-parameterization, a capacity-matched random control should close most of the gap, and if it is representation quality, it should not.
 
 A related line of work showed that pre-trained features transfer even \emph{without} fine-tuning. Donahue et al.~\cite{donahue2014decaf} (DeCAF) and Sharif Razavian et al.~\cite{razavian2014cnn} found that a linear classifier on \emph{frozen} activations from an ImageNet-pretrained CNN is a strong baseline across recognition tasks. That ``off-the-shelf features'' result is the reason my freeze-depth ablation includes a linear-probe endpoint, where only the head is trained on top of fully frozen features. Kornblith et al.~\cite{kornblith2019better} later compared transfer across many architectures and found that stronger ImageNet models tend to transfer better, which points to representation quality rather than capacity as the driver of downstream accuracy. That is exactly the factor my capacity-matched control isolates.
 
@@ -97,17 +100,19 @@ For context against prior work, publicly reported baselines on the Intel Image C
 
 \begin{table}[h]
 \centering
-\caption{Test Accuracy and Convergence Speed Comparison. Epochs reported as mean $\pm$ std across seeds.}
+\caption{Test Accuracy, Convergence Speed, and Training Cost. Epochs reported as mean $\pm$ std across seeds; wall clock is the mean per-run training time to early stopping.}
 \label{tab:test_acc}
-\begin{tabular}{lccc}
+\setlength{\tabcolsep}{4pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}
 \toprule
-\textbf{Condition} & \textbf{Mean Test Acc.} & \textbf{Std. Dev.} & \textbf{Epochs} \\
+\textbf{Condition} & \textbf{Mean Test Acc.} & \textbf{Std. Dev.} & \textbf{Epochs} & \textbf{Wall clock} \\
 \midrule
-Pretrained-Frozen & \pretrainedfrozenTestAccMean & \pretrainedfrozenTestAccStd & \pretrainedfrozenValEpochsMean\ $\pm$ \pretrainedfrozenValEpochsStd \\
-Random-Frozen & \randomfrozenTestAccMean & \randomfrozenTestAccStd & \randomfrozenValEpochsMean\ $\pm$ \randomfrozenValEpochsStd \\
-Random-Full & \randomfullTestAccMean & \randomfullTestAccStd & \randomfullValEpochsMean\ $\pm$ \randomfullValEpochsStd \\
+Pretrained-Frozen & \pretrainedfrozenTestAccMean & \pretrainedfrozenTestAccStd & \pretrainedfrozenValEpochsMean\ $\pm$ \pretrainedfrozenValEpochsStd & \pretrainedfrozenTrainSecondsMean\,s \\
+Random-Frozen & \randomfrozenTestAccMean & \randomfrozenTestAccStd & \randomfrozenValEpochsMean\ $\pm$ \randomfrozenValEpochsStd & \randomfrozenTrainSecondsMean\,s \\
+Random-Full & \randomfullTestAccMean & \randomfullTestAccStd & \randomfullValEpochsMean\ $\pm$ \randomfullValEpochsStd & \randomfullTrainSecondsMean\,s \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \subsection{Detailed Class Metrics}
@@ -240,12 +245,15 @@ Two conclusions follow. First, the disturbance introduced by swapping the first 
 
 \section{Discussion and Summary}
 \subsection{Isolating Pretraining Quality}
-PT-F and R-F share the same trainable parameters and the same freeze boundary, so the gap between them is down to feature quality alone. Table~\ref{tab:test_acc} shows that gap is large: over 50 points of test accuracy on average. Since $\theta_f$ in R-F is random and never updated, \texttt{layer4} has to turn essentially arbitrary patterns into class scores, which caps how far it can generalize. Even so, R-F reaches 66.5\%, well above the 16.7\% chance rate for six classes. That fits the finding of Saxe et al.~\cite{saxe2011random} that random convolutional filters still carry some frequency- and orientation-selective structure through pooling, so the random frozen extractor is a real baseline, not pure noise. PT-F, by contrast, starts from ImageNet weights that already encode edges, textures, and shape boundaries, and those features carry over well to the natural scenes in the Intel set.
+\label{subsec:quality}
+PT-F and R-F share the same trainable parameters and the same freeze boundary, so the gap between them is down to feature quality alone. Table~\ref{tab:test_acc} shows that gap is large: 26.7 points of test accuracy on average (\pretrainedfrozenTestAccMean\ against \randomfrozenTestAccMean). Since $\theta_f$ in R-F is random and never updated, \texttt{layer4} has to turn essentially arbitrary patterns into class scores, which caps how far it can generalize. Even so, R-F reaches 66.5\%, well above the 16.7\% chance rate for six classes. That fits the findings of Jarrett et al.~\cite{jarrett2009best} and Saxe et al.~\cite{saxe2011random} that random convolutional filters still carry some frequency- and orientation-selective structure through pooling, so the random frozen extractor is a real baseline, not pure noise. PT-F, by contrast, starts from ImageNet weights that already encode edges, textures, and shape boundaries, and those features carry over well to the natural scenes in the Intel set.
 
 \subsection{Isolating Trainable Capacity}
 R-F and R-FL both start from random weights, so the gap between them is about capacity. R-FL can adapt every parameter, including $\theta_f$, so its early layers learn filters from the pixels up to fit the data instead of being stuck at their initial values. That lifts its mean accuracy to \randomfullTestAccMean, against the restricted \randomfrozenTestAccMean\ of R-F.
 
-R-FL also takes much longer to train, converging in a mean of \randomfullValEpochsMean\ epochs against \randomfrozenValEpochsMean\ for R-F, and it still trails PT-F by a wide margin. So extra capacity helps, but it cannot make up for a poor starting point when the data and the epoch budget are limited.
+That recovers 18.1 points through capacity alone, appreciably less than the 26.7 points attributable to feature quality in Section~\ref{subsec:quality}. Both factors matter; the representation matters considerably more.
+
+R-FL also takes much longer to train, converging in a mean of \randomfullValEpochsMean\ epochs against \randomfrozenValEpochsMean\ for R-F, and it still finishes 8.6 points short of PT-F at roughly four times the wall-clock cost. So extra capacity helps, but it cannot make up for a poor starting point when the data and the epoch budget are limited.
 
 \subsection{Class-wise Confusions}
 My test confusion matrices show consistent patterns of category-specific confusion across all conditions, though the errors are far more pronounced in the random initialization models. 
@@ -257,12 +265,37 @@ The primary confusion occurs between:
 These errors come from genuine visual overlap in the data, not from anything in the training setup.
 
 \subsection{Limitations and Future Work}
-A few things limit these conclusions. I use one target dataset and one backbone (ResNet-18), so the size of the pretraining benefit could look different on other domains or deeper networks. The freeze-depth ablation of Section~\ref{sec:ablation} ran on a 40\% training subset at a single seed to save compute, and the Gabor substitution of Section~\ref{sec:gabor} reports a single seed on full data; both trends are clear, but tighter error bars would need several seeds. Every condition also shares one optimizer, learning rate, and early-stopping patience, so the comparison reflects a typical low-tuning setting rather than each method at its best.
+A few things limit these conclusions.
 
-The most useful next step is a data-fraction sweep. He et al.~\cite{he2019rethinking} argue that from-scratch training can match pretraining given enough data and iterations, so scaling the labeled set from a few hundred images up to the full split would show where, if anywhere, the two meet on scene classification. Running the ablation and the main comparison on a second backbone and a second dataset would show how far the ``most of the value needs almost no fine-tuning'' result carries.
+\textbf{One dataset, one architecture.} I use one target dataset and one backbone (ResNet-18), so the 26.7-point figure is not claimed to generalize across domains or to deeper networks.
+
+\textbf{Three seeds, no significance test.} The gaps between conditions far exceed the within-condition spread (Table~\ref{tab:test_acc}), but no formal significance test is run. The freeze-depth ablation of Section~\ref{sec:ablation} ran on a 40\% training subset at a single seed to save compute, and the Gabor substitution of Section~\ref{sec:gabor} reports a single seed on full data; both trends are clear, but tighter error bars would need several seeds. Read the shape of those two curves, not their exact values.
+
+\textbf{No data augmentation.} The preprocessing pipeline is a single deterministic resize and centre crop shared by the training, validation, and test splits, with no random flips, crops, or colour jitter at training time. This was omitted deliberately to keep the three conditions on an identical input distribution, but it depresses absolute accuracy relative to tuned baselines and disadvantages R-FL in particular, since a fully trainable network is the arm that stands to gain most from augmentation. The comparison between conditions is unaffected; the absolute numbers should be read with this in mind.
+
+\textbf{The Gabor bank is untuned.} Its orientations, wavelengths, and phases were fixed a priori rather than searched, so the residual 7-point gap in Section~\ref{sec:gabor} is an upper bound on the distance between a fixed oriented-filter front end and a learned one.
+
+\textbf{The control is not a method.} Random-Frozen exists to hold capacity fixed. It is not a proposal for how to train anything, and its 66.5\% should not be read as a recommended configuration.
+
+Every condition also shares one optimizer, learning rate, and early-stopping patience, so the comparison reflects a typical low-tuning setting rather than each method at its best.
+
+The most useful next step is a data-fraction sweep. He et al.~\cite{he2019rethinking} argue that from-scratch training can match pretraining given enough data and iterations, so scaling the labeled set from a few hundred images up to the full split would show where, if anywhere, the two meet on scene classification. Running the ablation and the main comparison on a second backbone and a second dataset would show how far the ``most of the value needs almost no fine-tuning'' result carries. Repeating it on a domain far from ImageNet is the sharpest version of that test, since it is exactly the regime where Raghu et al.~\cite{raghu2019transfusion} found model size dominating rather than reused features. Two further extensions follow from the design: replacing the random control with a parameter-matched shallow network would separate depth from capacity, and sweeping the size of the pretraining corpus would show whether the 26.7-point gap grows or saturates.
 
 \subsection{Summary}
-The goal was to separate two things that a plain pretrained-versus-scratch comparison mixes together, and the capacity-matched control did that. With the trainable parameters held fixed, pretrained features are worth more than 50 points of test accuracy over random ones, and they converge in far fewer epochs. The supporting views agree: the learning curves show pretraining is useful almost from the first epoch rather than just ending higher, and the PCA shows why, with pretrained features falling into class-separable clusters while random frozen features stay mixed. The freeze-depth sweep adds a practical note, since a bare linear probe already recovers most of the accuracy, so on this task the benefit of pretraining needs almost no fine-tuning to reach. When data or compute is limited, starting from pretrained weights is the clear choice.
+The goal was to separate two things that a plain pretrained-versus-scratch comparison mixes together, and the capacity-matched control did that. With the trainable parameters held fixed, pretrained features are worth 26.7 points of test accuracy over random ones, against the 18.1 points that full trainable capacity buys on its own, and they converge in far fewer epochs. The supporting views agree: the learning curves show pretraining is useful almost from the first epoch rather than just ending higher, and the PCA shows why, with pretrained features falling into class-separable clusters while random frozen features stay mixed. The freeze-depth sweep adds a practical note, since a bare linear probe already recovers most of the accuracy, so on this task the benefit of pretraining needs almost no fine-tuning to reach. When data or compute is limited, starting from pretrained weights is the clear choice.
+
+\section*{Acknowledgment}
+The Gabor substitution of Section~\ref{sec:gabor} originated with Prof. Bruce Maxwell (CS 5330, Khoury College), whose question about how far the influence of the first layer reaches up the network became that experiment. The Intel Image Classification dataset is distributed publicly via Kaggle, and the ResNet-18 implementation and ImageNet-pretrained weights used throughout come from PyTorch and torchvision.
+
+\section*{Supplementary Material}
+\begin{sloppypar}
+\noindent\textbf{Demo video.} A two-minute silent walkthrough with on-screen captions. The first segment runs the pretrained-frozen and random-frozen checkpoints over the same held-out test images side by side, showing the full softmax distribution for each; since both conditions train an identical 8{,}396{,}806 parameters, the disagreements are attributable to initialization alone. The second segment is a captioned pass over the result figures.\\
+\url{https://drive.google.com/file/d/1JZSamG6WljxIDFxSjuwxOERkdl2lQ34F/view?usp=sharing}
+
+\vspace{0.6em}
+\noindent\textbf{Final presentation.}\\
+\url{https://drive.google.com/file/d/1ImzhkgC75xF5Fq-7q1qQB8d4SKsGyZQx/view?usp=sharing}
+\end{sloppypar}
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
